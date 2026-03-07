@@ -46,7 +46,7 @@ Think: *Breath of the Wild* comfort, *Ratchet & Clank* weapon switching, *Mass E
 ┌─────────────────────────────────────────────────────┐
 │                  GAMEPAD LAYOUT                     │
 │                                                     │
-│   [LB] Radial: Weapons      [RB] Radial: Items     │
+│   [LB] Radial: Items         [RB] Radial: Weapons    │
 │   [LT] Aim / Zoom           [RT] Fire / Attack      │
 │                                                     │
 │   [L Stick] Move / Sprint(click)                    │
@@ -75,8 +75,8 @@ Think: *Breath of the Wild* comfort, *Ratchet & Clank* weapon switching, *Mass E
 | Aim / Zoom | Right Mouse Button | |
 | Melee / Alt-fire | V | |
 | Interact / Reload | E / R | Context-sensitive |
-| Weapon Radial | Q (hold) | Mouse selects from wheel |
-| Item Radial | Tab (hold) | Mouse selects from wheel |
+| Weapon Radial | Q (hold) | Mouse selects from wheel, real-time |
+| Item Radial | Tab (hold) | Mouse selects from wheel, real-time |
 | Quick swap weapons | Mouse Scroll / 1-4 keys | |
 | Quest Log | J | |
 | Map | M | |
@@ -89,8 +89,8 @@ Think: *Breath of the Wild* comfort, *Ratchet & Clank* weapon switching, *Mass E
 Radial menus are the core UI interaction — they replace traditional grid inventories during gameplay.
 
 **How they work:**
-- **Controller:** Hold LB/RB → right stick selects a wedge → release to confirm. Time slows (bullet-time at ~20% speed) while radial is open so you can think without pausing.
-- **KB+Mouse:** Hold Q/Tab → mouse cursor appears and selects a wedge → release to confirm. Same bullet-time effect.
+- **Controller:** Hold LB/RB → right stick selects a wedge → release to confirm. Game continues at full speed — radial is designed for quick, fluid swaps without breaking the action.
+- **KB+Mouse:** Hold Q/Tab → mouse cursor appears and selects a wedge → release to confirm. Same real-time behavior.
 - Wedges are large and forgiving — 4 to 8 items max per wheel. No fiddly small targets.
 - Each wedge shows an icon + name + brief stat (e.g., "Rifle — 24/60" or "Health Potion — x3").
 - Selected wedge highlights with a smooth scale-up animation. Subtle haptic pulse on controller when crossing wedge boundaries.
@@ -98,8 +98,8 @@ Radial menus are the core UI interaction — they replace traditional grid inven
 **Radial types:**
 | Radial | Trigger | Content | Slots |
 |---|---|---|---|
-| Weapon Wheel | LB / Q | Equipped weapons | 4-6 wedges |
-| Item Wheel | RB / Tab | Quick-use items (potions, grenades, buffs) | 4-8 wedges |
+| Weapon Wheel | RB / Q | Equipped weapons | 4-6 wedges |
+| Item Wheel | LB / Tab | Quick-use items (potions, grenades, buffs) | 4-8 wedges |
 | Emote/Interact Wheel | Hold X / Hold E (near NPC) | Context actions, dialogue choices | 3-6 wedges |
 
 **Radial UX details:**
@@ -160,7 +160,6 @@ These details make controller play feel "comfy":
 | Sprint toggle vs hold | Toggle |
 | Auto-center camera | Toggle |
 | Button remapping | Full remap for controller and KB+M |
-| Radial slow-mo speed | Slider (0% = full pause, 100% = no slowdown) |
 | Colorblind mode | Protanopia / Deuteranopia / Tritanopia filters |
 | HUD scale | Slider |
 | Subtitle size | Small / Medium / Large |
@@ -204,8 +203,8 @@ These details make controller play feel "comfy":
 | XP and leveling | XP counter, level thresholds, stat point allocation |
 | Inventory system | `Resource`-based items, `Array` container, UI grid |
 | 3-4 weapon types | Rifle, shotgun, pistol, melee — each a scene with unique behavior |
-| Weapon Radial (LB / Q) | Hold to open wheel, right stick / mouse to select, release to equip. Bullet-time while open |
-| Item Radial (RB / Tab) | Same UX for quick-use consumables (potions, grenades, buffs) |
+| Weapon Radial (RB / Q) | Hold to open wheel, right stick / mouse to select, release to equip. Real-time, no slowdown |
+| Item Radial (LB / Tab) | Same UX for quick-use consumables (potions, grenades, buffs) |
 | Weapon equip/swap | Radial wheel + D-pad L/R quick swap between last 2 weapons |
 | Consumables | Health potions, ammo pickups — `Resource` items with `use()` |
 | Simple quests | Accept from NPC → kill N enemies / find item → return for reward |
