@@ -166,30 +166,172 @@ These details make controller play feel "comfy":
 
 ---
 
+## Architectural Foundations — "Build Once, Never Rewrite"
+
+These 8 patterns are baked into Milestone 1 from day one. Each is cheap to set up now but expensive to retrofit later.
+
+### 1. InputManager Singleton
+
+`scripts/autoload/input_manager.gd` — All input flows through here, never raw `Input.is_action_pressed()` in gameplay scripts.
+
+- Tracks current device type (`CONTROLLER` or `KB_MOUSE`)
+- Emits `device_changed` signal when input device switches
+- Provides `get_action_glyph(action_name) -> Texture2D` for UI prompt switching
+- Stores per-player settings (sensitivity, deadzone, invert, aim assist level)
+- Handles rumble/haptics requests via `request_haptic(type, intensity, duration)`
+
+### 2. EventBus Singleton
+
+`scripts/autoload/event_bus.gd` — Typed signals for cross-system communication. Systems never call each other directly.
+
+```
+signal damage_dealt(damage_info: DamageInfo)
+signal entity_died(entity: Node3D, killer: Node3D)
+signal item_picked_up(item: ItemResource, picker: Node3D)
+signal weapon_switched(weapon: WeaponResource)
+signal quest_updated(quest: QuestResource, status: int)
+signal player_leveled_up(new_level: int)
+signal zone_entered(zone_name: String)
+signal destructible_broken(object: Node3D, damage_info: DamageInfo)
+```
+
+Why: Quests can listen for `entity_died` without knowing about combat. Stats can listen for `damage_dealt` without knowing about weapons. Systems stay decoupled.
+
+### 3. Physics Collision Layers
+
+Defined in `project.godot` from the start. Changing these later means updating every physics body in every scene.
+
+| Layer | Name | Used By |
+|---|---|---|
+| 1 | Environment | Terrain, walls, floors, static geometry |
+| 2 | Player | Player `CharacterBody3D` |
+| 3 | Enemy | Enemy `CharacterBody3D` |
+| 4 | PlayerProjectile | Bullets/projectiles fired by player |
+| 5 | EnemyProjectile | Bullets/projectiles fired by enemies |
+| 6 | Pickup | Loot drops, ammo, health pickups |
+| 7 | Trigger | Zone transitions, quest triggers, event areas |
+| 8 | Destructible | Breakable objects, explosive barrels |
+| 9 | NPC | Friendly NPCs, quest givers, shopkeepers |
+
+Collision masks are set so: player projectiles hit enemies + destructibles + environment (not player). Enemy projectiles hit player + environment (not enemies). Pickups only detect player. Triggers only detect player.
+
+### 4. State Machine Pattern
+
+`scripts/components/state_machine.gd` + `scripts/components/state.gd` — Generic, reusable state machine used by both player and enemies.
+
+**Base State class** provides:
+- `enter()` — called when transitioning into this state
+- `exit()` — called when leaving this state
+- `process(delta)` — per-frame logic
+- `physics_process(delta)` — per-physics-tick logic
+- `handle_input(event)` — input routing
+- `transition_to(state_name)` — request state change
+
+**Player states (M1):** Idle, Run, Sprint, Jump, Fall, Dodge, Aim, Shoot, Hurt, Dead
+**Enemy states (M1):** Idle, Patrol, Chase, Attack, Hurt, Dead
+
+Why: Every game that starts with if/else chains eventually needs a state machine. Starting with one avoids the single most common game dev rewrite.
+
+### 5. DamageInfo Resource
+
+`scripts/resources/damage_info.gd` — Structured damage data passed through the EventBus, never raw `health -= 10`.
+
+```gdscript
+class_name DamageInfo extends Resource
+
+@export var amount: float = 0.0
+@export var damage_type: DamageType = DamageType.PHYSICAL
+@export var source: Node3D = null
+@export var hit_position: Vector3 = Vector3.ZERO
+@export var knockback_force: Vector3 = Vector3.ZERO
+@export var is_critical: bool = false
+
+enum DamageType { PHYSICAL, FIRE, EXPLOSIVE, FALL }
+```
+
+Applied by a reusable `HealthComponent` (`scripts/components/health_component.gd`) that attaches to any damageable node — player, enemy, destructible. The component handles HP tracking, damage calculation, death signaling, and i-frame windows.
+
+### 6. Camera Controller (Independent)
+
+`scenes/player/camera_controller.gd` — Owns the `SpringArm3D` + `Camera3D` rig, loosely coupled to the player via exported `NodePath`.
+
+**Modes:**
+- **Follow** — Default third-person, lerped behind player, gentle auto-center
+- **Aim** — Over-the-shoulder offset (right), zoom in, no auto-center
+- **Shake** — Additive screen shake (weapon fire, explosions, damage)
+- **Death** — Slow orbit around player on death
+
+Camera never reads input directly — it receives target positions and mode changes from the player state machine. This means adding cinematic cameras, zone intro cameras, or boss fight cameras later is just a new mode, not a rewrite.
+
+### 7. UI Theme Resource
+
+`assets/themes/game_theme.tres` — Single Godot `Theme` resource referenced by all UI scenes.
+
+Defines:
+- Font family + sizes for headings, body, labels, tooltips
+- Color palette (primary, secondary, accent, danger, muted)
+- Panel/button/container StyleBox overrides for consistent look
+- Margin and padding constants
+
+All UI uses anchor-based layouts (`ANCHOR_*` presets), never absolute pixel positions. This ensures HUD scaling slider and resolution independence work without touching individual scenes.
+
+### 8. Save-Ready Object Identity
+
+Every significant game object implements a `Saveable` interface pattern:
+
+```gdscript
+# Any node that needs persistence
+func get_save_data() -> Dictionary:
+    return {
+        "id": unique_id,
+        "position": global_position,
+        "health": health_component.current_hp,
+        # ... object-specific state
+    }
+
+func load_save_data(data: Dictionary) -> void:
+    global_position = data["position"]
+    health_component.current_hp = data["health"]
+```
+
+Objects register themselves with `GameManager` on `_ready()` via a `saveable` group. Not wired to file I/O until Milestone 3 — we're just establishing the contract so every object knows how to serialize itself. When save/load lands, it's a plug-in, not a retrofit.
+
+---
+
 ## Milestone 1: Core Loop — "Move, Shoot, Kill"
 
-**Goal:** Validate that the core movement and combat feel good.
+**Goal:** Validate that the core movement and combat feel good, built on solid architectural foundations.
 
 | Feature | Godot Approach |
 |---|---|
-| Player character (3rd person) | `CharacterBody3D` + `SpringArm3D` + `Camera3D` |
-| Controller movement + camera | Dual-stick input via Input map, lerped camera smoothing |
+| **Foundations** | |
+| InputManager singleton | Device detection, input abstraction, haptics, glyph lookup |
+| EventBus singleton | Global typed signals for all cross-system events |
+| Physics collision layers (9) | Defined in `project.godot`, all bodies use correct layers from day 1 |
+| State machine (player + enemy) | `StateMachine` + `State` base classes, player has 10 states, enemy has 6 |
+| DamageInfo + HealthComponent | Structured damage resource, reusable HP component on all damageable objects |
+| Camera controller | Independent script, Follow + Aim + Shake + Death modes |
+| UI theme resource | `game_theme.tres` with fonts, colors, StyleBoxes, all UI anchored |
+| Saveable interface | `get_save_data()` / `load_save_data()` on player, enemies, objects |
+| **Gameplay** | |
+| Player character (3rd person) | `CharacterBody3D` + camera rig via `camera_controller.gd` |
+| Controller movement + camera | Dual-stick input via InputManager, lerped camera smoothing |
 | KB+Mouse movement + camera | WASD + mouse look, same Input actions with dual bindings |
 | Sprint, jump, dodge roll | L-stick click / Shift, A / Space, B / Ctrl — with coyote time + input buffering |
-| Aim mode (over-shoulder) | LT / RMB shifts camera offset, zooms slightly, slows movement |
+| Aim mode (over-shoulder) | LT / RMB triggers camera Aim mode, slows movement |
 | One weapon (rifle) | `RayCast3D` or projectile `RigidBody3D` |
 | Aim assist (controller) | Sticky aim + snap-to-target on LT. Tunable in settings |
 | Crosshair | Screen-center, adapts to weapon spread |
-| Auto input detection | Detect last device, swap UI prompts (glyphs ↔ key labels) instantly |
-| Basic enemy | `CharacterBody3D` + simple state machine (idle → chase → attack → dead) |
-| Health system | HP variable on player and enemies, damage signals |
-| Controller haptics | Rumble on fire, damage, low health pulse |
+| Auto input detection | InputManager detects device, UI swaps prompts instantly |
+| Basic enemy | `CharacterBody3D` + state machine (Idle → Patrol → Chase → Attack → Hurt → Dead) |
+| Health system | `HealthComponent` on player and enemies, damage via `DamageInfo` + EventBus |
+| Controller haptics | InputManager routes rumble on fire, damage, low health pulse |
 | Test arena | Static `MeshInstance3D` geometry, flat ground |
-| HUD | `Control` nodes: health bar, crosshair, ammo — button prompts swap with input device |
+| HUD | `Control` nodes using `game_theme.tres`: health bar, crosshair, ammo, input prompts |
 | Pause menu | `Control` overlay, `get_tree().paused = true`, navigable with controller |
 | Settings (input) | Stick sensitivity, deadzone, invert Y, aim assist toggle, vibration slider |
 
-**Deliverable:** A playable arena that feels great on a controller — smooth camera, aim assist, rumble feedback. Equally playable on KB+Mouse.
+**Deliverable:** A playable arena that feels great on a controller — smooth camera, aim assist, rumble feedback. Equally playable on KB+Mouse. All systems built on foundations that scale cleanly into Milestones 2-4.
 
 ---
 
@@ -267,12 +409,31 @@ exploration/
 │   ├── scenes/
 │   │   ├── player/
 │   │   │   ├── player.tscn        # Player scene (character + camera rig)
-│   │   │   ├── player.gd          # Movement, input, camera, shooting
-│   │   │   └── aim_assist.gd      # Sticky aim, snap, bullet magnetism
+│   │   │   ├── player.gd          # Player controller (delegates to state machine)
+│   │   │   ├── camera_controller.gd  # Independent camera system (Follow/Aim/Shake/Death)
+│   │   │   ├── aim_assist.gd      # Sticky aim, snap, bullet magnetism
+│   │   │   └── states/            # Player state scripts
+│   │   │       ├── player_idle.gd
+│   │   │       ├── player_run.gd
+│   │   │       ├── player_sprint.gd
+│   │   │       ├── player_jump.gd
+│   │   │       ├── player_fall.gd
+│   │   │       ├── player_dodge.gd
+│   │   │       ├── player_aim.gd
+│   │   │       ├── player_shoot.gd
+│   │   │       ├── player_hurt.gd
+│   │   │       └── player_dead.gd
 │   │   ├── enemies/
 │   │   │   ├── base_enemy.tscn
-│   │   │   ├── base_enemy.gd      # Base enemy state machine
-│   │   │   └── enemy_types/       # Specific enemy variations
+│   │   │   ├── base_enemy.gd      # Base enemy controller
+│   │   │   ├── enemy_types/       # Specific enemy variations
+│   │   │   └── states/            # Enemy state scripts
+│   │   │       ├── enemy_idle.gd
+│   │   │       ├── enemy_patrol.gd
+│   │   │       ├── enemy_chase.gd
+│   │   │       ├── enemy_attack.gd
+│   │   │       ├── enemy_hurt.gd
+│   │   │       └── enemy_dead.gd
 │   │   ├── weapons/
 │   │   │   ├── weapon_base.gd     # Base weapon class
 │   │   │   ├── rifle.tscn
@@ -286,7 +447,7 @@ exploration/
 │   │   │   ├── hud.tscn           # In-game HUD
 │   │   │   ├── hud.gd
 │   │   │   ├── radial_menu.tscn   # Reusable radial wheel component
-│   │   │   ├── radial_menu.gd     # Wedge selection, bullet-time, animations
+│   │   │   ├── radial_menu.gd     # Wedge selection, real-time animations
 │   │   │   ├── input_prompts.gd   # Swap glyphs/key labels based on device
 │   │   │   ├── inventory_panel.tscn
 │   │   │   ├── quest_log.tscn
@@ -297,10 +458,15 @@ exploration/
 │   │
 │   ├── scripts/
 │   │   ├── autoload/
-│   │   │   ├── game_manager.gd    # Singleton: game state, scene transitions
-│   │   │   ├── event_bus.gd       # Singleton: global signal bus
-│   │   │   └── input_manager.gd   # Singleton: device detection, prompt type, settings
+│   │   │   ├── game_manager.gd    # Singleton: game state, scene transitions, saveable registry
+│   │   │   ├── event_bus.gd       # Singleton: global typed signal bus
+│   │   │   └── input_manager.gd   # Singleton: device detection, prompts, haptics, settings
+│   │   ├── components/
+│   │   │   ├── state_machine.gd   # Generic state machine (used by player + enemies)
+│   │   │   ├── state.gd           # Base state class (enter/exit/process/handle_input)
+│   │   │   └── health_component.gd # Reusable HP, damage application, death, i-frames
 │   │   └── resources/
+│   │       ├── damage_info.gd     # Structured damage data (amount, type, source, knockback)
 │   │       ├── item_resource.gd   # Item data definition
 │   │       ├── stat_block.gd      # Character stats resource
 │   │       ├── quest_resource.gd  # Quest data definition
@@ -310,7 +476,9 @@ exploration/
 │       ├── models/                # 3D models (.glb / .obj)
 │       ├── textures/              # Textures and materials
 │       ├── audio/                 # Sound effects and music
-│       └── fonts/                 # UI fonts
+│       ├── fonts/                 # UI fonts
+│       └── themes/
+│           └── game_theme.tres    # Master UI theme (fonts, colors, StyleBoxes)
 │
 ├── GAME_PLAN.md                   # This file
 └── README.md
