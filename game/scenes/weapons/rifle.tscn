@@ -1,0 +1,24 @@
+[gd_scene load_steps=4 format=3 uid="uid://rifle001"]
+
+[ext_resource type="Script" path="res://scenes/weapons/rifle.gd" id="1_rifle"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_rifle"]
+size = Vector3(0.08, 0.1, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rifle"]
+albedo_color = Color(0.3, 0.3, 0.35, 1)
+
+[node name="Rifle" type="Node3D"]
+script = ExtResource("1_rifle")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
+mesh = SubResource("BoxMesh_rifle")
+surface_material_override/0 = SubResource("StandardMaterial3D_rifle")
+
+[node name="Muzzle" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+
+[node name="RayCast3D" type="RayCast3D" parent="."]
+target_position = Vector3(0, 0, -150)
+collision_mask = 133

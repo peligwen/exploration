@@ -1,0 +1,102 @@
+[gd_scene load_steps=16 format=3 uid="uid://player001"]
+
+[ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scenes/player/camera_controller.gd" id="2_camera"]
+[ext_resource type="Script" path="res://scripts/components/state_machine.gd" id="3_sm"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="4_health"]
+[ext_resource type="Script" path="res://scenes/player/states/player_idle.gd" id="5_idle"]
+[ext_resource type="Script" path="res://scenes/player/states/player_run.gd" id="6_run"]
+[ext_resource type="Script" path="res://scenes/player/states/player_sprint.gd" id="7_sprint"]
+[ext_resource type="Script" path="res://scenes/player/states/player_jump.gd" id="8_jump"]
+[ext_resource type="Script" path="res://scenes/player/states/player_fall.gd" id="9_fall"]
+[ext_resource type="Script" path="res://scenes/player/states/player_dodge.gd" id="10_dodge"]
+[ext_resource type="Script" path="res://scenes/player/states/player_aim.gd" id="11_aim"]
+[ext_resource type="Script" path="res://scenes/player/states/player_shoot.gd" id="12_shoot"]
+[ext_resource type="Script" path="res://scenes/player/states/player_hurt.gd" id="13_hurt"]
+[ext_resource type="Script" path="res://scenes/player/states/player_dead.gd" id="14_dead"]
+[ext_resource type="Script" path="res://scenes/player/aim_assist.gd" id="15_aim_assist"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_player"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_player"]
+albedo_color = Color(0.2, 0.5, 0.8, 1)
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_player")
+surface_material_override/0 = SubResource("StandardMaterial3D_player")
+
+[node name="WeaponMount" type="Node3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1.2, -0.5)
+
+[node name="CameraController" type="Node3D" parent="."]
+script = ExtResource("2_camera")
+target_path = NodePath("..")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+collision_mask = 1
+spring_length = 5.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraController/SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+fov = 70.0
+
+[node name="AimAssist" type="Node" parent="."]
+script = ExtResource("15_aim_assist")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("4_health")
+max_hp = 100.0
+iframe_duration = 0.5
+
+[node name="StateMachine" type="Node" parent="."]
+script = ExtResource("3_sm")
+initial_state = NodePath("Idle")
+
+[node name="Idle" type="Node" parent="StateMachine"]
+script = ExtResource("5_idle")
+
+[node name="Run" type="Node" parent="StateMachine"]
+script = ExtResource("6_run")
+
+[node name="Sprint" type="Node" parent="StateMachine"]
+script = ExtResource("7_sprint")
+
+[node name="Jump" type="Node" parent="StateMachine"]
+script = ExtResource("8_jump")
+
+[node name="Fall" type="Node" parent="StateMachine"]
+script = ExtResource("9_fall")
+
+[node name="Dodge" type="Node" parent="StateMachine"]
+script = ExtResource("10_dodge")
+
+[node name="Aim" type="Node" parent="StateMachine"]
+script = ExtResource("11_aim")
+
+[node name="Shoot" type="Node" parent="StateMachine"]
+script = ExtResource("12_shoot")
+
+[node name="Hurt" type="Node" parent="StateMachine"]
+script = ExtResource("13_hurt")
+
+[node name="Dead" type="Node" parent="StateMachine"]
+script = ExtResource("14_dead")
