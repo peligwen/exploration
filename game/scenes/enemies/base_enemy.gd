@@ -126,7 +126,7 @@ func get_save_data() -> Dictionary:
 
 
 func load_save_data(data: Dictionary) -> void:
-	var pos: Array = data.get("position", [0, 0, 0])
+	var pos: Array = data.get("position", [0, 0, 0]) as Array
 	global_position = Vector3(pos[0], pos[1], pos[2])
 	if data.has("health"):
 		health.load_save_data(data["health"])

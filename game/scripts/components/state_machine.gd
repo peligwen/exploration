@@ -25,7 +25,7 @@ func _ready() -> void:
 			current_state = state_node
 			current_state.enter("")
 	elif not states.is_empty():
-		current_state = states.values()[0]
+		current_state = states.values()[0] as State
 		current_state.enter("")
 
 
@@ -56,7 +56,7 @@ func transition_to(state_name: String) -> void:
 	if current_state:
 		current_state.exit()
 
-	current_state = states[state_name]
+	current_state = states[state_name] as State
 	current_state.enter(old_state_name)
 	state_changed.emit(old_state_name, state_name)
 
