@@ -78,8 +78,8 @@ func is_controller() -> bool:
 
 func get_action_glyph(action_name: String) -> String:
 	if is_controller():
-		return _controller_glyphs.get(action_name, action_name)
-	return _kb_glyphs.get(action_name, action_name)
+		return str(_controller_glyphs.get(action_name, action_name))
+	return str(_kb_glyphs.get(action_name, action_name))
 
 
 func get_look_vector() -> Vector2:
