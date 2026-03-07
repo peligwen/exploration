@@ -52,8 +52,9 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# Mouse look (KB+Mouse mode)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var mouse_event := event as InputEventMouseMotion
 		var sensitivity := InputManager.mouse_sensitivity
-		var motion := event.relative * sensitivity
+		var motion: Vector2 = mouse_event.relative * sensitivity
 		if InputManager.invert_y_mouse:
 			motion.y *= -1.0
 		camera_controller.apply_mouse_motion(motion)
