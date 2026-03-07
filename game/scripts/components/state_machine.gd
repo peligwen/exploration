@@ -49,7 +49,7 @@ func transition_to(state_name: String) -> void:
 		push_warning("StateMachine: No state named '%s'" % state_name)
 		return
 
-	var old_state_name := current_state.name if current_state else ""
+	var old_state_name: String = current_state.name if current_state else ""
 	if old_state_name == state_name:
 		return
 
@@ -62,4 +62,4 @@ func transition_to(state_name: String) -> void:
 
 
 func get_current_state_name() -> String:
-	return current_state.name if current_state else ""
+	return (current_state.name as String) if current_state else ""
