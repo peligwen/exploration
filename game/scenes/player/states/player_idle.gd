@@ -10,9 +10,7 @@ func enter(_previous_state: String) -> void:
 
 
 func physics_process_state(delta: float) -> void:
-	player.apply_gravity(delta)
-	player.velocity.x = move_toward(player.velocity.x, 0.0, player.move_speed * delta * 10.0)
-	player.velocity.z = move_toward(player.velocity.z, 0.0, player.move_speed * delta * 10.0)
+	player.decelerate_horizontal(delta)
 	player.move_and_slide()
 
 	# Track grounded for coyote time
@@ -21,7 +19,7 @@ func physics_process_state(delta: float) -> void:
 
 	# Transitions
 	var input := player.get_camera_relative_input()
-	if input.length() > 0.1:
+	if input.length() > Player.INPUT_DEADZONE:
 		transition_to("Run")
 		return
 

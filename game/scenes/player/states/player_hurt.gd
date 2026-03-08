@@ -4,6 +4,7 @@ extends State
 @onready var player: Player = owner
 var _timer: float = 0.0
 const HURT_DURATION: float = 0.3
+const HURT_DECEL: float = 20.0
 
 
 func enter(_previous_state: String) -> void:
@@ -13,18 +14,15 @@ func enter(_previous_state: String) -> void:
 
 
 func physics_process_state(delta: float) -> void:
-	player.apply_gravity(delta)
-
 	# Slow to a stop during hurt stun
-	player.velocity.x = move_toward(player.velocity.x, 0.0, 20.0 * delta)
-	player.velocity.z = move_toward(player.velocity.z, 0.0, 20.0 * delta)
+	player.decelerate_horizontal(delta, HURT_DECEL)
 	player.move_and_slide()
 
 	_timer -= delta
 	if _timer <= 0.0:
 		if player.health.is_dead:
 			transition_to("Dead")
-		elif player.get_camera_relative_input().length() > 0.1:
+		elif player.get_camera_relative_input().length() > Player.INPUT_DEADZONE:
 			transition_to("Run")
 		else:
 			transition_to("Idle")

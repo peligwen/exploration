@@ -3,6 +3,10 @@ extends CharacterBody3D
 ## Player controller. Delegates behavior to the state machine.
 ## Provides shared state and utilities that all player states access.
 
+const INPUT_DEADZONE: float = 0.1
+const AIR_CONTROL_FACTOR: float = 0.8
+const DECEL_FACTOR: float = 10.0
+
 # Movement tuning
 @export_group("Movement")
 @export var move_speed: float = 6.0
@@ -60,26 +64,60 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera_controller.apply_mouse_motion(motion)
 
 
-func get_camera_relative_input() -> Vector3:
-	## Returns movement input relative to camera facing direction.
-	var input := InputManager.get_move_vector()
-	if input.length() < 0.1:
-		return Vector3.ZERO
-
-	var forward := camera_controller.get_camera_forward()
-	var right := camera_controller.get_camera_right()
-	var direction := (forward * -input.y + right * input.x).normalized()
-	return direction
-
-
-func apply_gravity(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
 
+func get_camera_relative_input() -> Vector3:
+	## Returns movement input relative to camera facing direction.
+	var input := InputManager.get_move_vector()
+	if input.length() < INPUT_DEADZONE:
+		return Vector3.ZERO
+
+	var forward := camera_controller.get_camera_forward()
+	var right := camera_controller.get_camera_right()
+	return (forward * -input.y + right * input.x).normalized()
+
+
+func apply_air_control(delta: float) -> void:
+	## Shared air movement logic used by Jump and Fall states.
+	var direction := get_camera_relative_input()
+	var air_speed := sprint_speed if is_sprinting else move_speed
+	if direction.length() > INPUT_DEADZONE:
+		velocity.x = direction.x * air_speed * AIR_CONTROL_FACTOR
+		velocity.z = direction.z * air_speed * AIR_CONTROL_FACTOR
+		rotate_model_to_direction(direction, delta)
+
+
+func decelerate_horizontal(delta: float, rate: float = -1.0) -> void:
+	## Smoothly decelerates horizontal velocity toward zero.
+	if rate < 0.0:
+		rate = move_speed * DECEL_FACTOR
+	velocity.x = move_toward(velocity.x, 0.0, rate * delta)
+	velocity.z = move_toward(velocity.z, 0.0, rate * delta)
+
+
+func apply_aim_physics(delta: float) -> void:
+	## Shared aim/shoot movement: strafe at aim_speed, face camera direction.
+	var direction := get_camera_relative_input()
+	if direction.length() > INPUT_DEADZONE:
+		velocity.x = direction.x * aim_speed
+		velocity.z = direction.z * aim_speed
+	else:
+		decelerate_horizontal(delta, aim_speed * DECEL_FACTOR)
+	var cam_forward := camera_controller.get_camera_forward()
+	rotate_model_to_direction(cam_forward, delta)
+	move_and_slide()
+	# Controller look input
+	var look := InputManager.get_look_vector()
+	if look.length() > 0.01:
+		camera_controller.rotate_camera(look, delta)
+
+
 func rotate_model_to_direction(direction: Vector3, delta: float) -> void:
 	## Smoothly rotates the player model to face movement direction.
-	if direction.length() < 0.1:
+	if direction.length() < INPUT_DEADZONE:
 		return
 	facing_direction = direction
 	var target_angle := atan2(direction.x, direction.z)

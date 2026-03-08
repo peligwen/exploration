@@ -16,25 +16,7 @@ func exit() -> void:
 
 
 func physics_process_state(delta: float) -> void:
-	player.apply_gravity(delta)
-
-	# Strafe while shooting
-	var direction := player.get_camera_relative_input()
-	if direction.length() > 0.1:
-		player.velocity.x = direction.x * player.aim_speed
-		player.velocity.z = direction.z * player.aim_speed
-	else:
-		player.velocity.x = move_toward(player.velocity.x, 0.0, player.aim_speed * delta * 10.0)
-		player.velocity.z = move_toward(player.velocity.z, 0.0, player.aim_speed * delta * 10.0)
-
-	var cam_forward := player.camera_controller.get_camera_forward()
-	player.rotate_model_to_direction(cam_forward, delta)
-	player.move_and_slide()
-
-	# Controller look
-	var look := InputManager.get_look_vector()
-	if look.length() > 0.01:
-		player.camera_controller.rotate_camera(look, delta)
+	player.apply_aim_physics(delta)
 
 	_shoot_timer -= delta
 

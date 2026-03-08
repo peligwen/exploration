@@ -67,7 +67,7 @@ func is_in_attack_range() -> bool:
 func face_target(delta: float) -> void:
 	if not target:
 		return
-	var direction := (target.global_position - global_position).normalized()
+	var direction := target.global_position - global_position
 	direction.y = 0.0
 	if direction.length() > 0.01:
 		var target_angle := atan2(direction.x, direction.z)
@@ -80,14 +80,16 @@ func navigate_to(target_pos: Vector3, speed: float, delta: float) -> void:
 		return
 
 	var next_pos := nav_agent.get_next_path_position()
-	var direction := (next_pos - global_position).normalized()
+	var direction := next_pos - global_position
 	direction.y = 0.0
+	if direction.length() < 0.01:
+		return
+	direction = direction.normalized()
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 
-	if direction.length() > 0.01:
-		var target_angle := atan2(direction.x, direction.z)
-		model.rotation.y = lerp_angle(model.rotation.y, target_angle, delta * 8.0)
+	var target_angle := atan2(direction.x, direction.z)
+	model.rotation.y = lerp_angle(model.rotation.y, target_angle, delta * 8.0)
 
 	move_and_slide()
 

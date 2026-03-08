@@ -11,6 +11,5 @@ func enter(_previous_state: String) -> void:
 
 
 func physics_process_state(_delta: float) -> void:
-	# Just apply gravity and stay put
-	player.apply_gravity(_delta)
+	# Gravity is applied by Player._physics_process
 	player.move_and_slide()

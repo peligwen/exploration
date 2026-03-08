@@ -13,7 +13,7 @@ func enter(_previous_state: String) -> void:
 
 	# Dodge in input direction, or backward if no input
 	var input := player.get_camera_relative_input()
-	if input.length() > 0.1:
+	if input.length() > Player.INPUT_DEADZONE:
 		_dodge_direction = input.normalized()
 	else:
 		_dodge_direction = -player.facing_direction.normalized()
@@ -28,16 +28,13 @@ func exit() -> void:
 
 
 func physics_process_state(delta: float) -> void:
-	player.apply_gravity(delta)
-
 	player.velocity.x = _dodge_direction.x * player.dodge_speed
 	player.velocity.z = _dodge_direction.z * player.dodge_speed
 	player.move_and_slide()
 
 	_timer -= delta
 	if _timer <= 0.0:
-		var input := player.get_camera_relative_input()
-		if input.length() > 0.1:
+		if player.get_camera_relative_input().length() > Player.INPUT_DEADZONE:
 			transition_to("Run")
 		else:
 			transition_to("Idle")
