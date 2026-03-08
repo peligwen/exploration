@@ -33,6 +33,10 @@ class PlayerShoot(State):
                 self.transition_to("Idle")
             return
 
+    def exit(self):
+        self.owner.is_aiming = False
+        self.owner.camera_controller.set_mode(CameraMode.FOLLOW)
+
     def handle_input(self, key, is_press):
         if key == 'left control':
             self.transition_to("Dodge")

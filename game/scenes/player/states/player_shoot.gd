@@ -12,7 +12,8 @@ func enter(_previous_state: String) -> void:
 
 
 func exit() -> void:
-	pass # Aim state handles resetting camera mode
+	player.is_aiming = false
+	player.camera_controller.set_mode(CameraController.CameraMode.FOLLOW)
 
 
 func physics_process_state(delta: float) -> void:
