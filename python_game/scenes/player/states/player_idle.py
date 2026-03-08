@@ -26,6 +26,10 @@ class PlayerIdle(State):
             self.transition_to("Run")
             return
 
+        # TODO(migration): Double-transition risk — process_state() checks held_keys['space']
+        # AND handle_input() also transitions on 'space'. Both can fire in the same frame,
+        # causing a double transition. Remove the held_keys check here and rely solely on
+        # handle_input() for discrete actions (jump, dodge), or add a guard in transition_to.
         if held_keys['space']:
             self.transition_to("Jump")
             return
@@ -34,6 +38,9 @@ class PlayerIdle(State):
             self.transition_to("Dodge")
             return
 
+        # TODO(migration): Verify Ursina key name — 'right mouse' may not work for held
+        # state. Ursina uses 'right mouse down' for press events and held_keys may use a
+        # different key name. Test and confirm the correct held_keys key for right mouse.
         if held_keys['right mouse']:
             self.transition_to("Aim")
             return

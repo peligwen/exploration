@@ -68,6 +68,12 @@ class PauseMenu:
         self.sens_slider.on_value_changed = self._on_sensitivity_changed
         self._entities.append(self.sens_slider)
 
+        # TODO(migration): Missing settings controls that exist in GDScript version:
+        # - Aim assist strength slider (input_manager.aim_assist_strength)
+        # - Vibration intensity slider (input_manager.vibration_intensity)
+        # - Invert Y-axis toggle (input_manager.invert_y_mouse / invert_y_controller)
+        # Add these controls matching the GDScript pause_menu.gd implementation.
+
         # Quit button
         self.quit_button = Button(
             text="Quit",
@@ -90,6 +96,9 @@ class PauseMenu:
             game_manager.set_paused(True)
             mouse.locked = False
             mouse.visible = True
+        # TODO(migration): is_open is toggled AFTER show()/hide() calls. If show()/hide()
+        # trigger callbacks that check self.is_open, they'll see stale state. Toggle first,
+        # then call show/hide, or use separate open()/close() methods.
         self.is_open = not self.is_open
 
     def show(self):

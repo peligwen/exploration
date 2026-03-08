@@ -14,4 +14,8 @@ class PlayerDead(State):
 
     def process_state(self, delta: float):
         # Gravity is applied by Player.update()
+        # TODO(migration): No respawn mechanism. Player enters Dead state and stays forever.
+        # GDScript version either handles respawn input here or through GameManager. Add
+        # handle_input() to listen for a restart key, or connect GameManager to respawn
+        # after a delay.
         pass

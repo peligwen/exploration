@@ -35,6 +35,9 @@ class BaseEnemy(Entity):
         # Runtime
         self.target = None  # Usually the player
         self.gravity_strength = 20.0
+        # TODO(migration): id(self) returns a memory address that changes every run. Not
+        # stable for save/load across sessions. Use a deterministic ID like a UUID or an
+        # auto-incrementing counter stored on the class.
         self.unique_id = str(id(self))
         self.velocity = Vec3(0, 0, 0)
         self.grounded = True
@@ -64,6 +67,9 @@ class BaseEnemy(Entity):
 
         self.state_machine.update(dt)
 
+        # TODO(migration): No wall collision — enemies walk through all walls and pillars.
+        # Same issue as player._apply_physics(). Need horizontal raycasts or Ursina collider
+        # integration to prevent enemies from walking through arena geometry.
         # Apply physics
         self.position += self.velocity * dt
 
@@ -79,6 +85,9 @@ class BaseEnemy(Entity):
         return float('inf')
 
     def can_see_target(self) -> bool:
+        # TODO(migration): No line-of-sight check — only checks distance. Enemy can "see"
+        # the player through walls and pillars. Add a raycast from self.position to
+        # target.position and verify no environment geometry blocks the line of sight.
         if not self.target:
             return False
         return self.get_distance_to_target() <= self.detection_range

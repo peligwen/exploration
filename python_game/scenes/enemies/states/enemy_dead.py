@@ -22,4 +22,9 @@ class EnemyDead(State):
             self.owner.y -= delta * 0.5
         if self._despawn_timer <= 0.0:
             game_manager.unregister_saveable(self.owner)
+            # TODO(migration): destroy() removes the entity but state machine and state
+            # objects still hold references to self.owner. On the next frame, state_machine.
+            # update() will call self.current_state.process_state() on this dead state whose
+            # self.owner is now destroyed. Guard against this by setting state_machine.
+            # current_state = None before destroying, or disable updates on the owner first.
             destroy(self.owner)

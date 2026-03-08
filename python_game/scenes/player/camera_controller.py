@@ -1,6 +1,8 @@
 """Independent camera system. Follows a target entity.
 Modes: Follow, Aim, Shake, Death.
 """
+# TODO(migration): 'random' imported from ursina — should be 'import random' from Python
+# stdlib. Ursina re-exports it but this is fragile and may break in future versions.
 from ursina import Entity, camera, Vec3, lerp, mouse, time, random
 from enum import Enum
 import math
@@ -67,6 +69,9 @@ class CameraController:
 
     def get_camera_forward(self) -> Vec3:
         """Returns the flat (Y=0) forward direction of the camera."""
+        # TODO(migration): GDScript uses camera.global_transform.basis.z which accounts for
+        # all rotations (pitch, yaw, roll). This manual trig only uses yaw. If pitch affects
+        # aiming direction (e.g. shooting up/down), this will diverge from GDScript behavior.
         rad = math.radians(self.yaw)
         forward = Vec3(-math.sin(rad), 0, -math.cos(rad))
         return forward.normalized()
@@ -93,6 +98,11 @@ class CameraController:
         # Apply shake on top of any mode
         if self._shake_amount > 0.01:
             self._apply_shake(delta)
+
+    # TODO(migration): No camera collision avoidance. GDScript uses SpringArm3D which
+    # automatically shortens camera distance when geometry is between camera and player.
+    # Without this, the camera clips through walls and the player disappears. Implement
+    # a raycast from target to desired camera pos and clamp distance to hit point.
 
     def _process_follow(self, target_pos: Vec3, delta: float):
         yaw_rad = math.radians(self.yaw)
@@ -160,3 +170,7 @@ class CameraController:
         self._shake_amount = lerp(self._shake_amount, 0.0, delta * self._shake_decay)
         if self._shake_amount < 0.01:
             self._shake_amount = 0.0
+            # TODO(migration): GDScript resets camera.position = Vector3.ZERO when shake
+            # ends to clear residual offset. Without this, the camera stays at whatever
+            # the last shake offset was. The position set by _process_follow/_process_aim
+            # in the same frame partially masks this, but there may be a 1-frame jitter.

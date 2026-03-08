@@ -116,6 +116,11 @@ class Player(Entity):
 
     def input(self, key):
         """Handle input events."""
+        # TODO(migration): Always passes is_press=True. Ursina calls input() for both press
+        # and release — release keys end with " up" (e.g. "space up"). Detect release:
+        #   is_press = not key.endswith(' up')
+        #   actual_key = key.replace(' up', '') if not is_press else key
+        # Without this, states never see key releases (sprint toggle, aim release, etc.).
         self.state_machine.handle_input(key, True)
 
     def get_camera_relative_input(self) -> Vec3:
@@ -126,6 +131,9 @@ class Player(Entity):
 
         forward = self.camera_controller.get_camera_forward()
         right = self.camera_controller.get_camera_right()
+        # TODO(migration): Y-axis is not inverted here. GDScript uses (forward * -input.y)
+        # because Godot's input Y-axis points down. Ursina's held_keys w/s may already be
+        # correct, but verify — if forward/backward movement is inverted, negate move.y.
         direction = (forward * move.y + right * move.x)
         if direction.length() > 0:
             direction = direction.normalized()
@@ -142,6 +150,11 @@ class Player(Entity):
 
     def decelerate_horizontal(self, delta: float, rate: float = -1.0):
         """Smoothly decelerates horizontal velocity toward zero."""
+        # TODO(migration): GDScript uses move_toward() (linear deceleration toward zero).
+        # This multiplicative approach (exponential decay) feels different and can overshoot
+        # to negative values with large delta*rate > 1.0. Replace with:
+        #   self.velocity.x = move_toward(self.velocity.x, 0, rate * delta)
+        #   self.velocity.z = move_toward(self.velocity.z, 0, rate * delta)
         if rate < 0.0:
             rate = self.move_speed * DECEL_FACTOR
         factor = max(0, 1.0 - rate * delta)
@@ -165,6 +178,10 @@ class Player(Entity):
 
     def rotate_model_to_direction(self, direction: Vec3, delta: float):
         """Smoothly rotate the player to face movement direction."""
+        # TODO(migration): This rotates self.rotation_y (the Entity itself), which also
+        # rotates the collider. GDScript rotates model.rotation.y (a child node) separately
+        # from the physics body. Rotate self.model_pivot.rotation_y instead of self.rotation_y
+        # to keep the collider axis-aligned.
         if direction.length() < INPUT_DEADZONE:
             return
         self.facing_direction = direction
@@ -187,6 +204,11 @@ class Player(Entity):
 
     def _apply_physics(self, delta: float):
         """Apply velocity to position with simple collision."""
+        # TODO(migration): No wall collision at all — player walks through all walls and
+        # pillars. GDScript uses CharacterBody3D.move_and_slide() which handles wall sliding
+        # automatically. Implement horizontal raycasts or use Ursina's collider system to
+        # prevent walking through geometry. Floor clamping at y=0.9 is also hardcoded and
+        # won't work for multi-level terrain.
         # Clamp fall speed
         if self.velocity.y < -50:
             self.velocity.y = -50
@@ -204,6 +226,10 @@ class Player(Entity):
             self.grounded = True
 
     def _on_health_changed(self, current: float, maximum: float):
+        # TODO(migration): GDScript version triggers heartbeat haptic feedback when HP drops
+        # below 25%. Add:
+        #   if current / maximum < 0.25:
+        #       input_manager.request_haptic("heartbeat", ...)
         event_bus.emit(PLAYER_HEALTH_CHANGED, current, maximum)
 
     def _on_died(self):
@@ -213,6 +239,8 @@ class Player(Entity):
     def get_save_data(self) -> dict:
         return {
             "id": "player",
+            # TODO(migration): GDScript uses global_position. self.position in Ursina is
+            # local if parented. Use self.world_position for correct save data.
             "position": [self.position.x, self.position.y, self.position.z],
             "health": self.health.get_save_data(),
         }
