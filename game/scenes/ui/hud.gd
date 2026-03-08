@@ -39,12 +39,15 @@ func _on_ammo_changed(current: int, max_ammo: int) -> void:
 
 
 func _update_ammo_display(current: int, max_ammo: int) -> void:
-	ammo_label.text = "%d / %d" % [current, max_ammo]
 	if current == 0:
+		var reload_glyph := InputManager.get_action_glyph("reload")
+		ammo_label.text = "0 / %d [%s]" % [max_ammo, reload_glyph]
 		ammo_label.modulate = Color(1.0, 0.3, 0.3)
 	elif current <= max_ammo * 0.25:
+		ammo_label.text = "%d / %d" % [current, max_ammo]
 		ammo_label.modulate = Color(1.0, 0.8, 0.3)
 	else:
+		ammo_label.text = "%d / %d" % [current, max_ammo]
 		ammo_label.modulate = Color(1.0, 1.0, 1.0)
 
 
@@ -56,8 +59,18 @@ func _refresh_prompts() -> void:
 	# Update any visible prompts to match current input device
 	var reload_glyph := InputManager.get_action_glyph("reload")
 	if ammo_label and ammo_label.text.ends_with("]"):
-		# If showing reload prompt, update it
-		pass
+		# If showing reload prompt, replace the stale glyph with the current device's glyph
+		var bracket_start := ammo_label.text.rfind("[")
+		if bracket_start != -1:
+			ammo_label.text = ammo_label.text.substr(0, bracket_start) + "[%s]" % reload_glyph
+
+	if interact_prompt and interact_prompt.visible:
+		var interact_glyph := InputManager.get_action_glyph("interact")
+		# Re-format: replace the leading "[...] " glyph prefix
+		var space_idx := interact_prompt.text.find("] ")
+		if space_idx != -1:
+			var prompt_text := interact_prompt.text.substr(space_idx + 2)
+			interact_prompt.text = "[%s] %s" % [interact_glyph, prompt_text]
 
 
 func show_interact_prompt(text: String) -> void:
