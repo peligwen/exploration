@@ -85,12 +85,15 @@ class HUD:
             self.health_bar.color = color.green
 
     def _on_ammo_changed(self, current: int, max_ammo: int):
-        self.ammo_label.text = f"{current} / {max_ammo}"
         if current == 0:
+            reload_glyph = input_manager.get_action_glyph("reload")
+            self.ammo_label.text = f"0 / {max_ammo} [{reload_glyph}]"
             self.ammo_label.color = color.red
         elif current <= max_ammo * 0.25:
+            self.ammo_label.text = f"{current} / {max_ammo}"
             self.ammo_label.color = color.orange
         else:
+            self.ammo_label.text = f"{current} / {max_ammo}"
             self.ammo_label.color = color.white
 
     def update_state_debug(self, state_name: str):
