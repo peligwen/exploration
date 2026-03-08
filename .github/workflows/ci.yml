@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: pip install flake8
+
+      - name: Run flake8
+        run: flake8 python_game/scenes python_game/scripts
+        # Unit/integration tests are intentionally excluded from lint scope.
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            xvfb \
+            libgl1-mesa-glx \
+            libgles2 \
+            libx11-6
+
+      - name: Install Python dependencies
+        working-directory: python_game
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests (headless via xvfb-run)
+        working-directory: python_game
+        run: xvfb-run --auto-servernum python -m pytest tests/ -v --cov --cov-report=term-missing
