@@ -23,7 +23,7 @@ window.fps_counter.enabled = True
 
 # Lighting
 DirectionalLight(y=10, rotation=(45, -45, 0))
-AmbientLight(color=color.color(0, 0, 0.3))
+AmbientLight(color=color.hsv(0, 0, 0.3))
 
 # Create the test arena
 from scenes.world.test_arena import create_test_arena
