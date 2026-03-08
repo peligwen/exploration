@@ -22,7 +22,7 @@ class PauseMenu:
         self.background = Entity(
             parent=camera.ui,
             model='quad',
-            color=color.color(0, 0, 0, 0.7),
+            color=color.hsv(0, 0, 0, 0.7),
             scale=(2, 2),
             z=-0.1,
         )
@@ -79,7 +79,7 @@ class PauseMenu:
             text="Quit",
             position=(0, -0.15),
             scale=(0.3, 0.06),
-            color=color.color(0, 0.8, 0.5),
+            color=color.hsv(0, 0.8, 0.5),
             parent=camera.ui,
             on_click=application.quit,
         )

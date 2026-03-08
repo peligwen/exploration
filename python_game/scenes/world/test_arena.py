@@ -61,14 +61,14 @@ def create_test_arena():
     # Floor
     floor = Entity(
         model='plane',
-        color=color.color(120, 0.3, 0.4),
+        color=color.hsv(120, 0.3, 0.4),
         scale=(50, 1, 50),
         position=(0, 0, 0),
         collider='box',
     )
 
     # Walls
-    wall_color = color.color(0, 0, 0.3)
+    wall_color = color.hsv(0, 0, 0.3)
     # North wall
     Entity(model='cube', color=wall_color, scale=(50, 4, 1),
            position=(0, 2, 25), collider='box')
@@ -83,7 +83,7 @@ def create_test_arena():
            position=(-25, 2, 0), collider='box')
 
     # Pillars (cover)
-    pillar_color = color.color(30, 0.2, 0.5)
+    pillar_color = color.hsv(30, 0.2, 0.5)
     for pos in [Vec3(5, 1.5, 5), Vec3(-5, 1.5, -5), Vec3(8, 1.5, -3), Vec3(-7, 1.5, 6)]:
         Entity(model='cube', color=pillar_color, scale=(1.5, 3, 1.5),
                position=pos, collider='box')
