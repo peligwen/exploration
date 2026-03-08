@@ -1,0 +1,44 @@
+"""Player Dodge state — roll with i-frames."""
+from ursina import Vec3
+from scripts.components.state import State
+
+
+class PlayerDodge(State):
+    def __init__(self):
+        super().__init__("Dodge")
+        self._timer = 0.0
+        self._dodge_direction = Vec3(0, 0, 0)
+
+    def enter(self, previous_state: str):
+        player = self.owner
+        player.is_dodging = True
+        player.is_invincible = True
+        self._timer = player.dodge_duration
+
+        # Dodge in input direction, or backward if no input
+        direction = player.get_camera_relative_input()
+        if direction.length() > 0.1:
+            self._dodge_direction = direction.normalized()
+        else:
+            self._dodge_direction = -player.facing_direction.normalized()
+
+        player.rotate_model_to_direction(self._dodge_direction, 1.0)
+
+    def exit(self):
+        self.owner.is_dodging = False
+        self.owner.is_invincible = False
+
+    def process_state(self, delta: float):
+        player = self.owner
+        player.apply_gravity(delta)
+
+        player.velocity.x = self._dodge_direction.x * player.dodge_speed
+        player.velocity.z = self._dodge_direction.z * player.dodge_speed
+
+        self._timer -= delta
+        if self._timer <= 0.0:
+            direction = player.get_camera_relative_input()
+            if direction.length() > 0.1:
+                self.transition_to("Run")
+            else:
+                self.transition_to("Idle")
