@@ -1,7 +1,9 @@
 """Player Hurt state — brief stun after taking damage."""
 from scripts.components.state import State
+from scenes.player.player import INPUT_DEADZONE
 
 HURT_DURATION = 0.3
+HURT_DECEL = 20.0
 
 
 class PlayerHurt(State):
@@ -15,17 +17,15 @@ class PlayerHurt(State):
 
     def process_state(self, delta: float):
         player = self.owner
-        player.apply_gravity(delta)
 
         # Slow to a stop during hurt stun
-        player.velocity.x *= max(0, 1.0 - 20.0 * delta)
-        player.velocity.z *= max(0, 1.0 - 20.0 * delta)
+        player.decelerate_horizontal(delta, HURT_DECEL)
 
         self._timer -= delta
         if self._timer <= 0.0:
             if player.health.is_dead:
                 self.transition_to("Dead")
-            elif player.get_camera_relative_input().length() > 0.1:
+            elif player.get_camera_relative_input().length() > INPUT_DEADZONE:
                 self.transition_to("Run")
             else:
                 self.transition_to("Idle")

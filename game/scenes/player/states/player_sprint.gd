@@ -14,10 +14,8 @@ func exit() -> void:
 
 
 func physics_process_state(delta: float) -> void:
-	player.apply_gravity(delta)
-
 	var direction := player.get_camera_relative_input()
-	if direction.length() < 0.1:
+	if direction.length() < Player.INPUT_DEADZONE:
 		transition_to("Idle")
 		return
 

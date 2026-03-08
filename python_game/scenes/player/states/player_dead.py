@@ -13,4 +13,5 @@ class PlayerDead(State):
         self.owner.velocity = Vec3(0, 0, 0)
 
     def process_state(self, delta: float):
-        self.owner.apply_gravity(delta)
+        # Gravity is applied by Player.update()
+        pass

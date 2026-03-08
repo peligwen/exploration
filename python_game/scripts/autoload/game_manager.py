@@ -14,15 +14,13 @@ class _GameManager:
 
     def __init__(self):
         self.state = GameState.PLAYING
-        self._saveables = []
+        self._saveables: set = set()
 
     def register_saveable(self, obj):
-        if obj not in self._saveables:
-            self._saveables.append(obj)
+        self._saveables.add(obj)
 
     def unregister_saveable(self, obj):
-        if obj in self._saveables:
-            self._saveables.remove(obj)
+        self._saveables.discard(obj)
 
     def get_all_save_data(self) -> list:
         data = []

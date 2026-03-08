@@ -2,7 +2,7 @@
 from ursina import held_keys
 from scripts.components.state import State
 from scenes.player.camera_controller import CameraMode
-from scripts.autoload.input_manager import input_manager
+from scenes.player.player import INPUT_DEADZONE
 
 
 class PlayerAim(State):
@@ -19,25 +19,7 @@ class PlayerAim(State):
 
     def process_state(self, delta: float):
         player = self.owner
-        player.apply_gravity(delta)
-
-        # Slow strafe movement while aiming
-        direction = player.get_camera_relative_input()
-        if direction.length() > 0.1:
-            player.velocity.x = direction.x * player.aim_speed
-            player.velocity.z = direction.z * player.aim_speed
-        else:
-            player.velocity.x *= max(0, 1.0 - delta * 10.0)
-            player.velocity.z *= max(0, 1.0 - delta * 10.0)
-
-        # Face camera direction while aiming
-        cam_forward = player.camera_controller.get_camera_forward()
-        player.rotate_model_to_direction(cam_forward, delta)
-
-        # Controller look
-        look = input_manager.get_look_vector()
-        if abs(look.x) > 0.01 or abs(look.y) > 0.01:
-            player.camera_controller.rotate_camera(look.x, look.y, delta)
+        player.apply_aim_physics(delta)
 
         # Fire while aiming
         if held_keys['left mouse']:
@@ -45,8 +27,7 @@ class PlayerAim(State):
             return
 
         if not held_keys['right mouse']:
-            direction = player.get_camera_relative_input()
-            if direction.length() > 0.1:
+            if player.get_camera_relative_input().length() > INPUT_DEADZONE:
                 self.transition_to("Run")
             else:
                 self.transition_to("Idle")

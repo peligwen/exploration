@@ -1,6 +1,7 @@
 """Player Jump state — upward velocity, air control."""
 from ursina import time
 from scripts.components.state import State
+from scenes.player.player import INPUT_DEADZONE
 
 
 class PlayerJump(State):
@@ -21,15 +22,7 @@ class PlayerJump(State):
 
     def process_state(self, delta: float):
         player = self.owner
-        player.apply_gravity(delta)
-
-        # Air control
-        direction = player.get_camera_relative_input()
-        air_speed = player.sprint_speed if player.is_sprinting else player.move_speed
-        if direction.length() > 0.1:
-            player.velocity.x = direction.x * air_speed * 0.8
-            player.velocity.z = direction.z * air_speed * 0.8
-            player.rotate_model_to_direction(direction, delta)
+        player.apply_air_control(delta)
 
         if player.velocity.y <= 0.0:
             self.transition_to("Fall")
@@ -37,5 +30,5 @@ class PlayerJump(State):
     def handle_input(self, key, is_press):
         if key == 'left control':
             direction = self.owner.get_camera_relative_input()
-            if direction.length() > 0.1:
+            if direction.length() > INPUT_DEADZONE:
                 self.transition_to("Dodge")

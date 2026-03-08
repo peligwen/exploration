@@ -5,7 +5,7 @@ extends Node
 enum GameState { PLAYING, PAUSED, MENU, DEAD }
 
 var state: GameState = GameState.PLAYING
-var _saveables: Array[Node] = []
+var _saveables: Dictionary = {} # Node -> true, for O(1) register/unregister
 
 
 func _ready() -> void:
@@ -13,8 +13,7 @@ func _ready() -> void:
 
 
 func register_saveable(node: Node) -> void:
-	if node not in _saveables:
-		_saveables.append(node)
+	_saveables[node] = true
 
 
 func unregister_saveable(node: Node) -> void:
@@ -23,8 +22,8 @@ func unregister_saveable(node: Node) -> void:
 
 func get_all_save_data() -> Array[Dictionary]:
 	var data: Array[Dictionary] = []
-	for node in _saveables:
-		if node != null and is_instance_valid(node) and node.has_method("get_save_data"):
+	for node: Node in _saveables:
+		if is_instance_valid(node) and node.has_method("get_save_data"):
 			data.append(node.get_save_data())
 	return data
 

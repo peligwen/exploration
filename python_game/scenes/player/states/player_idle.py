@@ -1,6 +1,7 @@
 """Player Idle state — standing still, waiting for input."""
 from ursina import held_keys, time
 from scripts.components.state import State
+from scenes.player.player import INPUT_DEADZONE
 
 
 class PlayerIdle(State):
@@ -13,11 +14,7 @@ class PlayerIdle(State):
 
     def process_state(self, delta: float):
         player = self.owner
-        player.apply_gravity(delta)
-
-        # Decelerate to stop
-        player.velocity.x *= max(0, 1.0 - delta * 10.0)
-        player.velocity.z *= max(0, 1.0 - delta * 10.0)
+        player.decelerate_horizontal(delta)
 
         # Track grounded for coyote time
         if player.grounded:
@@ -25,7 +22,7 @@ class PlayerIdle(State):
 
         # Transitions
         direction = player.get_camera_relative_input()
-        if direction.length() > 0.1:
+        if direction.length() > INPUT_DEADZONE:
             self.transition_to("Run")
             return
 

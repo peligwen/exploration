@@ -1,6 +1,7 @@
 """Player Run state — moving at walk speed."""
 from ursina import held_keys, time
 from scripts.components.state import State
+from scenes.player.player import INPUT_DEADZONE
 
 
 class PlayerRun(State):
@@ -13,10 +14,9 @@ class PlayerRun(State):
 
     def process_state(self, delta: float):
         player = self.owner
-        player.apply_gravity(delta)
 
         direction = player.get_camera_relative_input()
-        if direction.length() < 0.1:
+        if direction.length() < INPUT_DEADZONE:
             self.transition_to("Idle")
             return
 

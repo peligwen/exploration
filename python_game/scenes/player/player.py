@@ -12,6 +12,11 @@ from scripts.components.health_component import HealthComponent
 from scenes.player.camera_controller import CameraController, CameraMode
 
 
+INPUT_DEADZONE = 0.1
+AIR_CONTROL_FACTOR = 0.8
+DECEL_FACTOR = 10.0
+
+
 class Player(Entity):
     """Player character with state machine, health, and camera."""
 
@@ -93,6 +98,10 @@ class Player(Entity):
         # Update health i-frames
         self.health.update(dt)
 
+        # Apply gravity before state update
+        if not self.grounded:
+            self.velocity.y -= self.gravity_strength * dt
+
         # Update state machine
         self.state_machine.update(dt)
 
@@ -112,7 +121,7 @@ class Player(Entity):
     def get_camera_relative_input(self) -> Vec3:
         """Returns movement input relative to camera facing direction."""
         move = input_manager.get_move_vector()
-        if abs(move.x) < 0.1 and abs(move.y) < 0.1:
+        if abs(move.x) < INPUT_DEADZONE and abs(move.y) < INPUT_DEADZONE:
             return Vec3(0, 0, 0)
 
         forward = self.camera_controller.get_camera_forward()
@@ -122,14 +131,41 @@ class Player(Entity):
             direction = direction.normalized()
         return direction
 
-    def apply_gravity(self, delta: float):
-        """Apply gravity when not on floor."""
-        if not self.grounded:
-            self.velocity.y -= self.gravity_strength * delta
+    def apply_air_control(self, delta: float):
+        """Shared air movement logic used by Jump and Fall states."""
+        direction = self.get_camera_relative_input()
+        air_speed = self.sprint_speed if self.is_sprinting else self.move_speed
+        if direction.length() > INPUT_DEADZONE:
+            self.velocity.x = direction.x * air_speed * AIR_CONTROL_FACTOR
+            self.velocity.z = direction.z * air_speed * AIR_CONTROL_FACTOR
+            self.rotate_model_to_direction(direction, delta)
+
+    def decelerate_horizontal(self, delta: float, rate: float = -1.0):
+        """Smoothly decelerates horizontal velocity toward zero."""
+        if rate < 0.0:
+            rate = self.move_speed * DECEL_FACTOR
+        factor = max(0, 1.0 - rate * delta)
+        self.velocity.x *= factor
+        self.velocity.z *= factor
+
+    def apply_aim_physics(self, delta: float):
+        """Shared aim/shoot movement: strafe at aim_speed, face camera direction."""
+        direction = self.get_camera_relative_input()
+        if direction.length() > INPUT_DEADZONE:
+            self.velocity.x = direction.x * self.aim_speed
+            self.velocity.z = direction.z * self.aim_speed
+        else:
+            self.decelerate_horizontal(delta, self.aim_speed * DECEL_FACTOR)
+        cam_forward = self.camera_controller.get_camera_forward()
+        self.rotate_model_to_direction(cam_forward, delta)
+        # Controller look input
+        look = input_manager.get_look_vector()
+        if abs(look.x) > 0.01 or abs(look.y) > 0.01:
+            self.camera_controller.rotate_camera(look.x, look.y, delta)
 
     def rotate_model_to_direction(self, direction: Vec3, delta: float):
         """Smoothly rotate the player to face movement direction."""
-        if direction.length() < 0.1:
+        if direction.length() < INPUT_DEADZONE:
             return
         self.facing_direction = direction
         target_angle = math.degrees(math.atan2(direction.x, direction.z))
