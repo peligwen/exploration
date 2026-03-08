@@ -14,7 +14,7 @@ class HUD:
         self.health_bar_bg = Entity(
             parent=camera.ui,
             model='quad',
-            color=color.color(0, 0, 0.15),
+            color=color.hsv(0, 0, 0.15),
             scale=(0.3, 0.03),
             position=(-0.55, 0.45),
         )
