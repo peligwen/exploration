@@ -97,6 +97,10 @@ def create_test_arena():
     player.current_weapon = rifle
     event_bus.emit(PLAYER_AMMO_CHANGED, rifle.current_ammo, rifle.max_ammo)
 
+    # TODO(migration): No patrol points assigned to enemies. patrol_points list is empty,
+    # so enemies will idle forever after losing sight of the player (EnemyPatrol state has
+    # nothing to patrol between). Assign patrol waypoints for each enemy.
+
     # --- Enemies ---
     enemy_positions = [Vec3(10, 1, 10), Vec3(-10, 1, -10), Vec3(15, 1, -5)]
     enemies = []
@@ -115,6 +119,9 @@ def create_test_arena():
         hud.update_state_debug(new_name)
     player.state_machine._on_state_changed = on_state_changed
 
+    # TODO(migration): Dead code — handle_pause is defined but never connected to any input
+    # system. Pause is handled in main.py's global input() instead. Remove this dead code
+    # or connect it properly. Also, player._pause_menu is assigned but never used.
     # Handle pause input
     def handle_pause(key):
         if key == 'escape':

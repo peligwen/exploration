@@ -33,6 +33,11 @@ player, enemies, hud, pause_menu = create_test_arena()
 
 def input(key):
     """Global input handler."""
+    # TODO(migration): Double escape handling — this global input() handles escape for the
+    # pause menu, but Player.input() also forwards all keys (including 'escape') to the
+    # state machine. The state machine could react to escape before/after this handler runs.
+    # Either handle pause exclusively here and filter 'escape' from player input, or handle
+    # it exclusively in player input and remove this global handler.
     if key == 'escape':
         pause_menu.toggle_pause()
 

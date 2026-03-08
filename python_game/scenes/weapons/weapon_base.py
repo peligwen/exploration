@@ -63,6 +63,11 @@ class WeaponBase(Entity):
         origin = camera.world_position
         direction = camera.forward
 
+        # TODO(migration): Spread calculation is incorrect. GDScript modifies the raycast's
+        # rotation angles (pitch and yaw) independently, producing uniform angular spread.
+        # This approach adds random offsets to X/Y direction components but not Z, which
+        # produces non-uniform spread biased toward the forward axis. Use quaternion rotation
+        # or spherical coordinate offsets around the direction vector instead.
         # Apply spread
         if self.spread > 0:
             spread_rad = math.radians(self.spread)
@@ -72,6 +77,10 @@ class WeaponBase(Entity):
                 direction.z
             ).normalized()
 
+        # TODO(migration): No collision layer filtering. GDScript sets collision_mask to
+        # layers 1|4|128 (Environment, Enemy, Destructible). This raycast hits everything
+        # including other weapons, UI entities, and the player's own model_pivot. Add
+        # Ursina-compatible layer filtering or tag-based ignore list.
         hit = raycast(origin, direction, distance=self.range_distance,
                       ignore=[self, self.weapon_owner])
         if hit.hit:
@@ -95,6 +104,13 @@ class WeaponBase(Entity):
         event_bus.emit(PLAYER_AMMO_CHANGED, self.current_ammo, self.max_ammo)
 
     def _on_hit(self, entity, point, normal):
+        # TODO(migration): GDScript checks collider.has_node("HealthComponent") and gets the
+        # component from the scene tree. This checks hasattr(entity, 'health') which is a
+        # different pattern — will miss entities where HealthComponent is stored under a
+        # different attribute name. Standardize the health component access pattern.
+        # TODO(migration): hit.world_normal from Ursina can be None when hitting certain
+        # geometry. The fallback on line below handles it, but verify this doesn't produce
+        # zero-length knockback vectors when it should have a direction.
         if entity and hasattr(entity, 'health'):
             normal_vec = normal if normal else Vec3(0, 0, 0)
             info = DamageInfo.create(

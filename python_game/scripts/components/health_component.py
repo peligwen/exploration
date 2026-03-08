@@ -15,6 +15,9 @@ class HealthComponent:
         self._iframe_timer = 0.0
         self.owner = None  # Set by the entity that owns this component
 
+        # TODO(migration): Single-callback pattern only supports one listener per event.
+        # GDScript signals support multiple connections. Use a list of callbacks or emit
+        # through EventBus so multiple systems (HUD, camera shake, etc.) can all react.
         # Callbacks
         self.on_health_changed = None  # (current, maximum)
         self.on_died = None  # ()
@@ -25,6 +28,12 @@ class HealthComponent:
             self._iframe_timer -= delta
 
     def take_damage(self, damage_info):
+        # TODO(migration): No invincibility check. GDScript player sets is_invincible=True
+        # during dodge, but this method never checks owner.is_invincible. Add:
+        #   if hasattr(self.owner, 'is_invincible') and self.owner.is_invincible: return
+        # TODO(migration): No re-entrancy guard. on_died callback could trigger another
+        # take_damage call before this one returns (e.g. explosion chain). Add a
+        # _processing_damage flag to prevent nested calls.
         if self.is_dead:
             return
         if self._iframe_timer > 0.0:

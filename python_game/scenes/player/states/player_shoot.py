@@ -38,6 +38,9 @@ class PlayerShoot(State):
         self.owner.camera_controller.set_mode(CameraMode.FOLLOW)
 
     def handle_input(self, key, is_press):
+        # TODO(migration): Missing reload input handling. GDScript Shoot state handles 'r'
+        # key press to trigger weapon.start_reload(). Add:
+        #   if key == 'r': self.owner.current_weapon.start_reload()
         if key == 'left control':
             self.transition_to("Dodge")
 
@@ -47,4 +50,6 @@ class PlayerShoot(State):
             player.current_weapon.fire()
 
         player.camera_controller.add_shake(0.3)
+        # TODO(migration): Fire rate is hardcoded to 0.15 instead of using the weapon's
+        # fire_rate property. Should be: self._shoot_timer = player.current_weapon.fire_rate
         self._shoot_timer = 0.15

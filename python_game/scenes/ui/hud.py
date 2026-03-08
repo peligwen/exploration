@@ -68,6 +68,11 @@ class HUD:
             parent=camera.ui,
         )
 
+        # TODO(migration): Missing device_changed handler. GDScript HUD listens for
+        # InputManager.device_changed signal to swap button prompts between controller
+        # glyphs and KB+M labels. Add a callback that updates any input hint text when
+        # the active device changes.
+
         # Connect signals
         event_bus.connect(PLAYER_HEALTH_CHANGED, self._on_health_changed)
         event_bus.connect(PLAYER_AMMO_CHANGED, self._on_ammo_changed)

@@ -22,9 +22,18 @@ class _EventBus:
 
     def emit(self, signal_name: str, *args, **kwargs):
         """Emit a signal, calling all connected callbacks."""
+        # TODO(migration): Iterating self._listeners[signal_name] directly is unsafe — if a
+        # callback connects or disconnects a listener during emission, the list mutates mid-
+        # iteration and will crash. Copy the list first:
+        #   for callback in list(self._listeners[signal_name]):
         for callback in self._listeners[signal_name]:
             callback(*args, **kwargs)
 
+
+# TODO(migration): GDScript signals have typed parameters (e.g. damage_dealt(damage_info: Resource),
+# entity_died(entity: Node3D)). This Python version uses bare strings with no argument validation.
+# Add type-checked signal definitions or at least document expected signatures per signal to prevent
+# silent arg mismatches.
 
 # Signal name constants
 DAMAGE_DEALT = "damage_dealt"
