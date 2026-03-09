@@ -1,6 +1,6 @@
 """Player Shoot state — fire weapon continuously while held."""
-from ursina import held_keys
 from scripts.components.state import State
+from scripts.autoload.input_manager import input_manager
 from scenes.player.camera_controller import CameraMode
 
 
@@ -21,13 +21,13 @@ class PlayerShoot(State):
         self._shoot_timer -= delta
 
         # Continuous fire while held
-        if held_keys['left mouse'] and self._shoot_timer <= 0.0:
+        if input_manager.is_action_held('fire') and self._shoot_timer <= 0.0:
             self._fire()
             return
 
         # Release fire
-        if not held_keys['left mouse']:
-            if held_keys['right mouse']:
+        if not input_manager.is_action_held('fire'):
+            if input_manager.is_action_held('aim'):
                 self.transition_to("Aim")
             else:
                 self.transition_to("Idle")

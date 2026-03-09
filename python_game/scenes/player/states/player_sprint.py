@@ -1,6 +1,7 @@
 """Player Sprint state — moving at sprint speed."""
-from ursina import held_keys, time
+from ursina import time
 from scripts.components.state import State
+from scripts.autoload.input_manager import input_manager
 from scenes.player.player import INPUT_DEADZONE
 
 
@@ -30,7 +31,7 @@ class PlayerSprint(State):
         if player.grounded:
             player.last_grounded_time = time.time()
 
-        if not held_keys['left shift']:
+        if not input_manager.is_action_held('sprint'):
             self.transition_to("Run")
             return
 

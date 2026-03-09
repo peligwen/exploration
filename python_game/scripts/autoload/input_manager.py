@@ -24,6 +24,45 @@ _HAPTIC_PATTERNS: dict[str, tuple[float, float, float]] = {
     "radial_tick": (0.0,  0.3, 0.05),
 }
 
+# KB+M keys held for each logical action.
+_KB_ACTION_MAP: dict[str, str] = {
+    "fire":    "left mouse",
+    "aim":     "right mouse",
+    "jump":    "space",
+    "dodge":   "left control",
+    "sprint":  "left shift",
+    "interact": "e",
+    "reload":  "r",
+    "melee":   "v",
+    "pause":   "escape",
+}
+
+# Gamepad button names as reported by Ursina/Panda3D held_keys.
+# Triggers (fire/aim) are checked via pygame axes in is_action_held()
+# because Panda3D treats them as analog axes, not digital buttons.
+_PAD_ACTION_MAP: dict[str, str] = {
+    "jump":    "gamepad face a",
+    "dodge":   "gamepad face b",
+    "reload":  "gamepad face x",
+    "interact": "gamepad face x",
+    "melee":   "gamepad face y",
+    "sprint":  "gamepad left thumb",
+    "pause":   "gamepad start",
+}
+
+# Maps Ursina gamepad key-press strings to their KB equivalent so that
+# player.input() can forward them to state handle_input() unchanged.
+CONTROLLER_KEY_MAP: dict[str, str] = {
+    "gamepad face a":     "space",
+    "gamepad face b":     "left control",
+    "gamepad face x":     "e",
+    "gamepad face y":     "v",
+    "gamepad left thumb": "left shift",
+    "gamepad start":      "escape",
+    # Triggers handled via analog axis, mapped to mouse button strings
+    # when they cross the press threshold (see player.py _controller_trigger).
+}
+
 
 class _InputManager:
     """Singleton input manager."""
@@ -41,6 +80,7 @@ class _InputManager:
         self.mouse_sensitivity = 40.0
         self.stick_sensitivity = 3.0
         self.stick_deadzone = 0.2
+        self.trigger_threshold = 0.5   # Axis value at which a trigger counts as "held"
         self.invert_y_mouse = False
         self.invert_y_controller = False
         self.aim_assist_strength = 0.5
@@ -90,7 +130,7 @@ class _InputManager:
         self._device_changed_callbacks.append(callback)
 
     def notify_input(self, source: DeviceType) -> None:
-        """Call from input handlers whenever a KB+M or controller event fires.
+        """Call whenever a KB+M or controller event is detected.
         Switches current_device and fires device_changed callbacks if needed."""
         if source != self.current_device:
             self.current_device = source
@@ -108,21 +148,77 @@ class _InputManager:
         return self._kb_glyphs.get(action_name, action_name)
 
     # ------------------------------------------------------------------
+    # Action queries — use these in game code instead of held_keys directly
+    # ------------------------------------------------------------------
+
+    def is_action_held(self, action_name: str) -> bool:
+        """Returns True if the KB+M or controller binding for the action is held.
+
+        Checks Ursina held_keys for keyboard/button inputs and pygame joystick
+        axes for analog triggers (fire = RT axis 5, aim = LT axis 2 on Xbox).
+        """
+        kb_key = _KB_ACTION_MAP.get(action_name)
+        if kb_key and held_keys.get(kb_key, 0):
+            return True
+
+        pad_key = _PAD_ACTION_MAP.get(action_name)
+        if pad_key and held_keys.get(pad_key, 0):
+            return True
+
+        # Analog triggers must be read as axes
+        if action_name in ("fire", "aim"):
+            try:
+                import pygame
+                if pygame.joystick.get_count() > 0:
+                    js = pygame.joystick.Joystick(0)
+                    # Xbox layout: LT = axis 2, RT = axis 5
+                    axis = 5 if action_name == "fire" else 2
+                    return js.get_axis(axis) > self.trigger_threshold
+            except Exception:
+                pass
+
+        return False
+
+    # ------------------------------------------------------------------
     # Movement / look vectors
     # ------------------------------------------------------------------
 
     def get_move_vector(self) -> Vec2:
-        """Returns movement input as Vec2 (x=right, y=forward)."""
+        """Returns movement input as Vec2 (x=right, y=forward).
+
+        Prefers KB input; falls back to controller left stick (axes 0/1).
+        Calls notify_input() to keep device tracking up to date.
+        """
         x = float(held_keys['d']) - float(held_keys['a'])
         y = float(held_keys['w']) - float(held_keys['s'])
-        return Vec2(x, y)
+        if x != 0.0 or y != 0.0:
+            self.notify_input(DeviceType.KB_MOUSE)
+            return Vec2(x, y)
+
+        try:
+            import pygame
+            if pygame.joystick.get_count() > 0:
+                js = pygame.joystick.Joystick(0)
+                sx = js.get_axis(0)           # left stick X
+                sy = -js.get_axis(1)          # left stick Y (up = negative)
+                if abs(sx) < self.stick_deadzone:
+                    sx = 0.0
+                if abs(sy) < self.stick_deadzone:
+                    sy = 0.0
+                if sx != 0.0 or sy != 0.0:
+                    self.notify_input(DeviceType.CONTROLLER)
+                    return Vec2(sx, sy)
+        except Exception:
+            pass
+
+        return Vec2(0.0, 0.0)
 
     def get_look_vector(self) -> Vec2:
-        """Returns camera look input from controller right stick.
+        """Returns camera look input from controller right stick (axes 2/3).
 
-        Reads joy axes 2/3 (right stick X/Y) via pygame, applies deadzone
-        and stick_sensitivity.  Returns Vec2(0,0) on KB+M or if no joystick
-        is connected.
+        Applies deadzone, stick_sensitivity, and invert_y_controller.
+        Returns Vec2(0,0) on KB+M or when no joystick is connected.
+        Calls notify_input() when non-zero input is detected.
         """
         try:
             import pygame
@@ -134,10 +230,12 @@ class _InputManager:
                     raw_x = 0.0
                 if abs(raw_y) < self.stick_deadzone:
                     raw_y = 0.0
-                if self.invert_y_controller:
-                    raw_y *= -1
-                return Vec2(raw_x * self.stick_sensitivity,
-                            raw_y * self.stick_sensitivity)
+                if raw_x != 0.0 or raw_y != 0.0:
+                    self.notify_input(DeviceType.CONTROLLER)
+                    if self.invert_y_controller:
+                        raw_y *= -1
+                    return Vec2(raw_x * self.stick_sensitivity,
+                                raw_y * self.stick_sensitivity)
         except Exception:
             pass
         return Vec2(0, 0)

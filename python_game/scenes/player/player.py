@@ -6,7 +6,7 @@ import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED
 from scripts.resources.collision_layers import LAYER_PLAYER
-from scripts.autoload.input_manager import input_manager
+from scripts.autoload.input_manager import input_manager, DeviceType, CONTROLLER_KEY_MAP
 from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
 from scripts.components.health_component import HealthComponent
@@ -94,9 +94,16 @@ class Player(Entity):
             sensitivity = input_manager.mouse_sensitivity
             dx = mouse.velocity[0] * sensitivity
             dy = mouse.velocity[1] * sensitivity
+            if dx != 0 or dy != 0:
+                input_manager.notify_input(DeviceType.KB_MOUSE)
             if input_manager.invert_y_mouse:
                 dy *= -1
             self.camera_controller.apply_mouse_motion(dx, dy)
+
+        # Controller look (right stick) — runs every frame regardless of mouse
+        look = input_manager.get_look_vector()  # notify_input called inside
+        if look.x != 0 or look.y != 0:
+            self.camera_controller.rotate_camera(look.x, look.y, dt)
 
         # Update health i-frames
         self.health.update(dt)
@@ -121,9 +128,17 @@ class Player(Entity):
         """Handle input events. Escape is reserved for the global pause handler."""
         if key in ('escape', 'escape up'):
             return
-        is_press = not key.endswith(' up')
-        actual_key = key[:-3] if not is_press else key  # strip ' up'
-        self.state_machine.handle_input(actual_key, is_press)
+
+        # Remap controller button strings to their KB equivalents so that
+        # state handle_input() methods only need to handle one set of key names.
+        is_release = key.endswith(' up')
+        base_key = key[:-3] if is_release else key
+        if base_key in CONTROLLER_KEY_MAP:
+            base_key = CONTROLLER_KEY_MAP[base_key]
+            key = base_key + (' up' if is_release else '')
+
+        is_press = not is_release
+        self.state_machine.handle_input(base_key, is_press)
 
     def get_camera_relative_input(self) -> Vec3:
         """Returns movement input relative to camera facing direction."""

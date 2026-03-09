@@ -1,6 +1,7 @@
 """Player Idle state — standing still, waiting for input."""
-from ursina import held_keys, time
+from ursina import time
 from scripts.components.state import State
+from scripts.autoload.input_manager import input_manager
 from scenes.player.player import INPUT_DEADZONE
 
 
@@ -26,7 +27,7 @@ class PlayerIdle(State):
             self.transition_to("Run")
             return
 
-        if held_keys['right mouse']:
+        if input_manager.is_action_held('aim'):
             self.transition_to("Aim")
             return
 
