@@ -223,10 +223,8 @@ class Player(Entity):
             self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
 
     def _on_health_changed(self, current: float, maximum: float):
-        # TODO(migration): GDScript version triggers heartbeat haptic feedback when HP drops
-        # below 25%. Add:
-        #   if current / maximum < 0.25:
-        #       input_manager.request_haptic("heartbeat", ...)
+        if maximum > 0 and (current / maximum) < 0.25:
+            input_manager.request_haptic("heartbeat")
         event_bus.emit(PLAYER_HEALTH_CHANGED, current, maximum)
 
     def _on_died(self):
