@@ -2,7 +2,7 @@
 from ursina import (Entity, Text, Button, Slider, camera, color, mouse,
                     application, Vec2, destroy)
 
-from scripts.autoload.input_manager import input_manager
+from scripts.autoload.input_manager import input_manager, DeviceType
 from scripts.autoload.game_manager import game_manager
 
 
@@ -12,10 +12,14 @@ class PauseMenu:
     def __init__(self):
         self.is_open = False
         self._entities = []
+        self._controller_entities = []  # aim assist + vibration (controller-only)
 
         # Build UI elements (initially hidden)
         self._build_ui()
         self.hide()
+
+        # Update controller-only UI when input device changes
+        input_manager.on_device_changed(self._on_device_changed)
 
     def _build_ui(self):
         # Background overlay
@@ -87,6 +91,7 @@ class PauseMenu:
         )
         self.aim_slider.on_value_changed = self._on_aim_assist_changed
         self._entities.append(self.aim_slider)
+        self._controller_entities.extend([self.aim_label, self.aim_slider])
 
         # Vibration intensity slider
         self.vib_label = Text(
@@ -107,6 +112,7 @@ class PauseMenu:
         )
         self.vib_slider.on_value_changed = self._on_vibration_changed
         self._entities.append(self.vib_slider)
+        self._controller_entities.extend([self.vib_label, self.vib_slider])
 
         # Invert Y-axis toggle
         self._invert_y_text = self._invert_label()
@@ -146,6 +152,7 @@ class PauseMenu:
     def show(self):
         for e in self._entities:
             e.enabled = True
+        self._update_controller_ui()
 
     def hide(self):
         for e in self._entities:
@@ -174,3 +181,12 @@ class PauseMenu:
         input_manager.invert_y_mouse = not input_manager.invert_y_mouse
         input_manager.invert_y_controller = input_manager.invert_y_mouse
         self.invert_y_button.text = self._invert_label()
+
+    def _update_controller_ui(self):
+        show = input_manager.current_device == DeviceType.CONTROLLER
+        for e in self._controller_entities:
+            e.enabled = show
+
+    def _on_device_changed(self, _device):
+        if self.is_open:
+            self._update_controller_ui()

@@ -12,7 +12,7 @@ class PlayerDead(State):
         super().__init__("Dead")
 
     def enter(self, previous_state: str, msg: dict = None):
-        self.owner.camera_controller.set_mode(CameraMode.FOLLOW)
+        self.owner.camera_controller.set_mode(CameraMode.DEATH)
         self.owner.velocity = Vec3(0, 0, 0)
 
     def process_state(self, delta: float):

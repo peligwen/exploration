@@ -37,6 +37,11 @@ class BaseEnemy(Entity):
 
         self.collision_group = LAYER_ENEMY
 
+        # Damage flash
+        self._original_color = color.red
+        self._flash_timer = 0.0
+        self._flash_duration = 0.15
+
         # Runtime
         self.target = None  # Usually the player
         self.gravity_strength = 20.0
@@ -63,6 +68,12 @@ class BaseEnemy(Entity):
             return
 
         self.health.update(dt)
+
+        # Damage flash tick
+        if self._flash_timer > 0:
+            self._flash_timer -= dt
+            if self._flash_timer <= 0:
+                self.color = self._original_color
 
         # Gravity
         if not self.grounded:
@@ -168,6 +179,8 @@ class BaseEnemy(Entity):
         self.state_machine.transition_to("Dead")
 
     def _on_damage_taken(self, damage_info):
+        self.color = color.white
+        self._flash_timer = self._flash_duration
         if not self.health.is_dead:
             self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
 
