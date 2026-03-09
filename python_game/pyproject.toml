@@ -1,0 +1,17 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--tb=short"
+markers = [
+    "unit: pure-Python logic tests, no Ursina Entity required",
+    "integration: tests that require a headless Ursina application",
+]
+
+[tool.coverage.run]
+source = ["scenes", "scripts"]
+omit = ["tests/*"]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E501", "W503"]
+exclude = [".git", "__pycache__", "tests/"]
