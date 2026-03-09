@@ -1,8 +1,11 @@
-"""In-game HUD — health bar, ammo display, crosshair, state debug."""
-from ursina import Text, Entity, camera, color, Vec2
+"""In-game HUD — health bar, ammo display, crosshair, kill counter, damage numbers."""
+from ursina import Text, Entity, camera, color, Vec2, Vec3, destroy
 import math
 
-from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_AMMO_CHANGED
+from scripts.autoload.event_bus import (
+    event_bus, PLAYER_HEALTH_CHANGED, PLAYER_AMMO_CHANGED,
+    ENTITY_DIED, DAMAGE_DEALT,
+)
 from scripts.autoload.input_manager import input_manager
 
 
@@ -51,12 +54,33 @@ class HUD:
             parent=camera.ui,
         )
 
-        # Crosshair
-        self.crosshair = Text(
-            text="+",
-            position=(0, 0),
+        # Crosshair (4 lines + center dot)
+        _line_len = 0.012
+        _line_w = 0.002
+        _gap = 0.005
+        self._crosshair_parts = []
+        for pos, scale in [
+            ((0, _gap + _line_len / 2), (_line_w, _line_len)),       # top
+            ((0, -(_gap + _line_len / 2)), (_line_w, _line_len)),    # bottom
+            ((-(_gap + _line_len / 2), 0), (_line_len, _line_w)),    # left
+            ((_gap + _line_len / 2, 0), (_line_len, _line_w)),       # right
+        ]:
+            part = Entity(parent=camera.ui, model='quad', color=color.white,
+                          scale=scale, position=pos)
+            self._crosshair_parts.append(part)
+        # Center dot
+        self._crosshair_parts.append(
+            Entity(parent=camera.ui, model='quad', color=color.white,
+                   scale=(_line_w, _line_w), position=(0, 0))
+        )
+
+        # Kill counter
+        self._kill_count = 0
+        self.kill_label = Text(
+            text="Kills: 0",
+            position=(0.55, 0.40),
             origin=(0, 0),
-            scale=2,
+            scale=1,
             parent=camera.ui,
         )
 
@@ -75,6 +99,8 @@ class HUD:
         # Connect signals
         event_bus.connect(PLAYER_HEALTH_CHANGED, self._on_health_changed)
         event_bus.connect(PLAYER_AMMO_CHANGED, self._on_ammo_changed)
+        event_bus.connect(ENTITY_DIED, self._on_entity_died)
+        event_bus.connect(DAMAGE_DEALT, self._on_damage_dealt)
         input_manager.on_device_changed(self._on_device_changed)
 
     def _on_health_changed(self, current: float, maximum: float):
@@ -106,6 +132,35 @@ class HUD:
         else:
             self.ammo_label.text = f"{current} / {max_ammo}"
             self.ammo_label.color = color.white
+
+    def _on_entity_died(self, entity, source):
+        from scenes.enemies.base_enemy import BaseEnemy
+        if isinstance(entity, BaseEnemy):
+            self._kill_count += 1
+            self.kill_label.text = f"Kills: {self._kill_count}"
+
+    def _on_damage_dealt(self, damage_info):
+        hit_pos = damage_info.hit_position
+        if hit_pos is None or hit_pos.length() < 0.01:
+            return
+        screen_pos = camera.main.world_to_screen_point(hit_pos)
+        if screen_pos.z < 0:
+            return
+        # Ursina UI coordinates: x in [-0.5 * aspect, 0.5 * aspect], y in [-0.5, 0.5]
+        ui_x = (screen_pos.x - 0.5) * camera.ui.aspect_ratio
+        ui_y = screen_pos.y - 0.5
+        dmg_color = color.red if damage_info.is_critical else color.yellow
+        dmg_text = Text(
+            text=f"{damage_info.amount:.0f}",
+            position=(ui_x, ui_y),
+            origin=(0, 0),
+            scale=2,
+            color=dmg_color,
+            parent=camera.ui,
+        )
+        dmg_text.animate_y(ui_y + 0.05, duration=0.6)
+        dmg_text.animate('color', color.clear, duration=0.6)
+        destroy(dmg_text, delay=0.7)
 
     def update_state_debug(self, state_name: str):
         self.state_label.text = state_name

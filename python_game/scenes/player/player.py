@@ -6,6 +6,7 @@ import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED
 from scripts.resources.collision_layers import LAYER_PLAYER
+from scripts.resources.damage_info import DamageInfo, DamageType
 from scripts.autoload.input_manager import input_manager, DeviceType, CONTROLLER_KEY_MAP
 from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
@@ -16,6 +17,9 @@ from scenes.player.camera_controller import CameraController, CameraMode
 INPUT_DEADZONE = 0.1
 AIR_CONTROL_FACTOR = 0.8
 DECEL_FACTOR = 10.0
+KILL_FLOOR_Y = -10.0
+SPAWN_POSITION = Vec3(0, 0.9, 0)
+FLASH_DURATION = 0.15
 
 
 class Player(Entity):
@@ -80,6 +84,10 @@ class Player(Entity):
         # Register as saveable
         game_manager.register_saveable(self)
 
+        # Damage flash
+        self._original_color = color.azure
+        self._flash_timer = 0.0
+
         # Mouse capture
         mouse.locked = True
         mouse.visible = False
@@ -108,6 +116,12 @@ class Player(Entity):
         # Update health i-frames
         self.health.update(dt)
 
+        # Damage flash tick
+        if self._flash_timer > 0:
+            self._flash_timer -= dt
+            if self._flash_timer <= 0:
+                self.model_pivot.color = self._original_color
+
         # Apply gravity before state update
         if not self.grounded:
             self.velocity.y -= self.gravity_strength * dt
@@ -123,6 +137,14 @@ class Player(Entity):
 
         # Apply physics
         self._apply_physics(dt)
+
+        # Out-of-bounds protection
+        if self.position.y < KILL_FLOOR_Y:
+            self.position = SPAWN_POSITION
+            self.velocity = Vec3(0, 0, 0)
+            if not self.health.is_dead:
+                fall_dmg = DamageInfo.create(25.0, None, DamageType.FALL)
+                self.health.take_damage(fall_dmg)
 
     def input(self, key):
         """Handle input events. Escape is reserved for the global pause handler."""
@@ -244,6 +266,8 @@ class Player(Entity):
             self.grounded = True
 
     def _on_damage_taken(self, damage_info):
+        self.model_pivot.color = color.white
+        self._flash_timer = FLASH_DURATION
         if not self.health.is_dead:
             self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
 

@@ -27,7 +27,53 @@ from scenes.enemies.states.enemy_attack import EnemyAttack
 from scenes.enemies.states.enemy_hurt import EnemyHurt
 from scenes.enemies.states.enemy_dead import EnemyDead
 
-from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED
+from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED, ENTITY_DIED
+
+
+import random
+
+
+class EnemySpawner(Entity):
+    """Respawns enemies after they die. Extends Entity for automatic update() calls."""
+
+    RESPAWN_DELAY = 5.0  # seconds after death event (enemy despawns after 3s, so +5s = 8s total)
+
+    def __init__(self, player, enemy_patrol_data):
+        super().__init__()
+        self._player = player
+        self._enemy_patrol_data = enemy_patrol_data
+        self._respawn_queue = []  # list of {'timer': float, 'data_idx': int}
+        event_bus.connect(ENTITY_DIED, self._on_entity_died)
+
+    def _on_entity_died(self, entity, source):
+        if not isinstance(entity, BaseEnemy):
+            return
+        idx = random.randrange(len(self._enemy_patrol_data))
+        self._respawn_queue.append({
+            'timer': self.RESPAWN_DELAY + 3.0,  # +3s for despawn animation
+            'data_idx': idx,
+        })
+
+    def update(self):
+        from ursina import time
+        dt = time.dt
+        if dt <= 0:
+            return
+        remaining = []
+        for entry in self._respawn_queue:
+            entry['timer'] -= dt
+            if entry['timer'] <= 0:
+                self._spawn_enemy(entry['data_idx'])
+            else:
+                remaining.append(entry)
+        self._respawn_queue = remaining
+
+    def _spawn_enemy(self, idx):
+        pos, patrol_points = self._enemy_patrol_data[idx]
+        enemy = BaseEnemy(position=pos)
+        enemy.target = self._player
+        enemy.patrol_points = list(patrol_points)
+        _setup_enemy_states(enemy)
 
 
 def _setup_player_states(player: Player):
@@ -111,6 +157,9 @@ def create_test_arena():
         enemy.patrol_points = patrol_points
         _setup_enemy_states(enemy)
         enemies.append(enemy)
+
+    # --- Enemy Respawner ---
+    EnemySpawner(player, enemy_patrol_data)
 
     # --- UI ---
     hud = HUD()
