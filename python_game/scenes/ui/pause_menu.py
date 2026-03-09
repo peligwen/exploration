@@ -86,7 +86,8 @@ class PauseMenu:
         self._entities.append(self.quit_button)
 
     def toggle_pause(self):
-        if self.is_open:
+        self.is_open = not self.is_open
+        if not self.is_open:
             self.hide()
             game_manager.set_paused(False)
             mouse.locked = True
@@ -96,10 +97,6 @@ class PauseMenu:
             game_manager.set_paused(True)
             mouse.locked = False
             mouse.visible = True
-        # TODO(migration): is_open is toggled AFTER show()/hide() calls. If show()/hide()
-        # trigger callbacks that check self.is_open, they'll see stale state. Toggle first,
-        # then call show/hide, or use separate open()/close() methods.
-        self.is_open = not self.is_open
 
     def show(self):
         for e in self._entities:

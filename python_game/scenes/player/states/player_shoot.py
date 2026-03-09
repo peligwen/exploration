@@ -38,9 +38,8 @@ class PlayerShoot(State):
         self.owner.camera_controller.set_mode(CameraMode.FOLLOW)
 
     def handle_input(self, key, is_press):
-        # TODO(migration): Missing reload input handling. GDScript Shoot state handles 'r'
-        # key press to trigger weapon.start_reload(). Add:
-        #   if key == 'r': self.owner.current_weapon.start_reload()
+        if key == 'r' and is_press and self.owner.current_weapon:
+            self.owner.current_weapon.start_reload()
         if key == 'left control':
             self.transition_to("Dodge")
 

@@ -116,12 +116,9 @@ class Player(Entity):
 
     def input(self, key):
         """Handle input events."""
-        # TODO(migration): Always passes is_press=True. Ursina calls input() for both press
-        # and release — release keys end with " up" (e.g. "space up"). Detect release:
-        #   is_press = not key.endswith(' up')
-        #   actual_key = key.replace(' up', '') if not is_press else key
-        # Without this, states never see key releases (sprint toggle, aim release, etc.).
-        self.state_machine.handle_input(key, True)
+        is_press = not key.endswith(' up')
+        actual_key = key[:-3] if not is_press else key  # strip ' up'
+        self.state_machine.handle_input(actual_key, is_press)
 
     def get_camera_relative_input(self) -> Vec3:
         """Returns movement input relative to camera facing direction."""
