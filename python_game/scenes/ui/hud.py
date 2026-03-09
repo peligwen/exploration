@@ -68,14 +68,14 @@ class HUD:
             parent=camera.ui,
         )
 
-        # TODO(migration): Missing device_changed handler. GDScript HUD listens for
-        # InputManager.device_changed signal to swap button prompts between controller
-        # glyphs and KB+M labels. Add a callback that updates any input hint text when
-        # the active device changes.
+        # Cache last known ammo so the glyph can be refreshed on device switch
+        self._last_ammo = 30
+        self._last_max_ammo = 30
 
         # Connect signals
         event_bus.connect(PLAYER_HEALTH_CHANGED, self._on_health_changed)
         event_bus.connect(PLAYER_AMMO_CHANGED, self._on_ammo_changed)
+        input_manager.on_device_changed(self._on_device_changed)
 
     def _on_health_changed(self, current: float, maximum: float):
         ratio = current / maximum if maximum > 0 else 0
@@ -89,7 +89,13 @@ class HUD:
         else:
             self.health_bar.color = color.green
 
+    def _on_device_changed(self, _device):
+        """Refresh input hint glyphs whenever the active device switches."""
+        self._on_ammo_changed(self._last_ammo, self._last_max_ammo)
+
     def _on_ammo_changed(self, current: int, max_ammo: int):
+        self._last_ammo = current
+        self._last_max_ammo = max_ammo
         if current == 0:
             reload_glyph = input_manager.get_action_glyph("reload")
             self.ammo_label.text = f"0 / {max_ammo} [{reload_glyph}]"
