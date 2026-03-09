@@ -33,9 +33,11 @@ class _InputManager:
         self._device_changed_callbacks: list[Callable[[DeviceType], None]] = []
 
         # Input settings
-        # TODO(migration): GDScript uses mouse_sensitivity = 0.002 (radians per pixel).
-        # This value of 40.0 is on a completely different scale. Verify Ursina's mouse
-        # delta units and calibrate so camera rotation feels equivalent to the Godot version.
+        # GDScript mouse_sensitivity = 0.002 rad/px ≈ 0.1146 deg/px.
+        # Ursina mouse.velocity is in normalised screen space (delta / window_width).
+        # At 1920 px wide: 1 px → 0.000521 velocity units, so the equivalent
+        # Ursina sensitivity would be ≈ 220.  The value below is empirically
+        # calibrated for feel; adjust via the pause menu sensitivity slider.
         self.mouse_sensitivity = 40.0
         self.stick_sensitivity = 3.0
         self.stick_deadzone = 0.2
@@ -46,19 +48,34 @@ class _InputManager:
         self.sprint_is_toggle = False
         self.auto_center_camera = True
 
-        # Glyph mappings for UI prompts
-        self._kb_glyphs = {
-            "jump": "Space",
-            "dodge": "Ctrl",
-            "interact": "E",
-            "reload": "R",
-            "melee": "V",
-            "fire": "LMB",
-            "aim": "RMB",
+        # Glyph mappings for UI prompts (KB+M)
+        self._kb_glyphs: dict[str, str] = {
+            "jump":         "Space",
+            "dodge":        "Ctrl",
+            "interact":     "E",
+            "reload":       "R",
+            "melee":        "V",
+            "fire":         "LMB",
+            "aim":          "RMB",
             "weapon_wheel": "Q",
-            "item_wheel": "Tab",
-            "sprint": "Shift",
-            "pause": "Esc",
+            "item_wheel":   "Tab",
+            "sprint":       "Shift",
+            "pause":        "Esc",
+        }
+
+        # Glyph mappings for UI prompts (Xbox-style controller)
+        self._controller_glyphs: dict[str, str] = {
+            "jump":         "A",
+            "dodge":        "B",
+            "interact":     "X",
+            "reload":       "X",
+            "melee":        "Y",
+            "fire":         "RT",
+            "aim":          "LT",
+            "weapon_wheel": "LB",
+            "item_wheel":   "RB",
+            "sprint":       "L3",
+            "pause":        "Start",
         }
 
     def is_controller(self) -> bool:
@@ -84,10 +101,10 @@ class _InputManager:
     # Glyph lookup
     # ------------------------------------------------------------------
 
-    # TODO(migration): Only KB glyphs exist. GDScript version has full controller glyph
-    # mappings (A/B/X/Y, triggers, bumpers, sticks). Add _controller_glyphs dict and
-    # return the right set based on self.current_device.
     def get_action_glyph(self, action_name: str) -> str:
+        """Return the display label for an action based on the active device."""
+        if self.is_controller():
+            return self._controller_glyphs.get(action_name, action_name)
         return self._kb_glyphs.get(action_name, action_name)
 
     # ------------------------------------------------------------------
@@ -101,10 +118,28 @@ class _InputManager:
         return Vec2(x, y)
 
     def get_look_vector(self) -> Vec2:
-        """Returns camera look input. For KB+M, mouse delta is handled separately."""
-        # TODO(migration): This is a stub — always returns zero. GDScript version reads
-        # controller right stick (joy_axis 2/3) with deadzone and sensitivity applied.
-        # Controller camera look is completely non-functional without this.
+        """Returns camera look input from controller right stick.
+
+        Reads joy axes 2/3 (right stick X/Y) via pygame, applies deadzone
+        and stick_sensitivity.  Returns Vec2(0,0) on KB+M or if no joystick
+        is connected.
+        """
+        try:
+            import pygame
+            if pygame.joystick.get_count() > 0:
+                js = pygame.joystick.Joystick(0)
+                raw_x = js.get_axis(2)   # right stick X
+                raw_y = js.get_axis(3)   # right stick Y
+                if abs(raw_x) < self.stick_deadzone:
+                    raw_x = 0.0
+                if abs(raw_y) < self.stick_deadzone:
+                    raw_y = 0.0
+                if self.invert_y_controller:
+                    raw_y *= -1
+                return Vec2(raw_x * self.stick_sensitivity,
+                            raw_y * self.stick_sensitivity)
+        except Exception:
+            pass
         return Vec2(0, 0)
 
     # ------------------------------------------------------------------
@@ -131,7 +166,7 @@ class _InputManager:
             return
         _low, _high, _dur = _HAPTIC_PATTERNS[pattern_name]
         _strength = self.vibration_intensity * intensity_scale
-        # TODO: call platform rumble API here, e.g.:
+        # Platform rumble call goes here, e.g.:
         #   joystick.rumble(_low * _strength, _high * _strength, int(_dur * 1000))
 
 

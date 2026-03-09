@@ -1,7 +1,7 @@
 """Independent camera system. Follows a target entity.
 Modes: Follow, Aim, Shake, Death.
 """
-from ursina import Entity, camera, Vec3, lerp, mouse, time
+from ursina import Entity, camera, Vec3, lerp, mouse, time, raycast
 from enum import Enum
 import math
 import random
@@ -96,10 +96,22 @@ class CameraController:
         if self._shake_amount > 0.01:
             self._apply_shake(delta)
 
-    # TODO(migration): No camera collision avoidance. GDScript uses SpringArm3D which
-    # automatically shortens camera distance when geometry is between camera and player.
-    # Without this, the camera clips through walls and the player disappears. Implement
-    # a raycast from target to desired camera pos and clamp distance to hit point.
+    def _spring_arm(self, eye: Vec3, desired: Vec3) -> Vec3:
+        """Shorten camera arm when geometry sits between player and camera.
+        Mirrors GDScript SpringArm3D: raycast from eye to desired position and
+        pull the camera forward from any hit point by a small margin."""
+        direction = desired - eye
+        distance = direction.length()
+        if distance < 0.01:
+            return desired
+        ignore = [self.target]
+        if hasattr(self.target, 'model_pivot'):
+            ignore.append(self.target.model_pivot)
+        hit = raycast(eye, direction.normalized(), distance=distance, ignore=ignore)
+        if hit.hit:
+            # Pull slightly away from the surface so the camera doesn't clip
+            return hit.world_point - direction.normalized() * 0.15
+        return desired
 
     def _process_follow(self, target_pos: Vec3, delta: float):
         yaw_rad = math.radians(self.yaw)
@@ -110,7 +122,8 @@ class CameraController:
         offset_y = math.sin(pitch_rad) * self.follow_distance + self.follow_height
         offset_z = math.cos(yaw_rad) * math.cos(pitch_rad) * self.follow_distance
 
-        camera_pos = target_pos + Vec3(offset_x, offset_y, offset_z)
+        eye = target_pos + Vec3(0, 1.0, 0)
+        camera_pos = self._spring_arm(eye, target_pos + Vec3(offset_x, offset_y, offset_z))
         camera.position = lerp(camera.position, camera_pos, delta * self.lerp_speed)
 
         # Look at target with slight height offset
@@ -134,7 +147,8 @@ class CameraController:
         # Apply pitch to vertical offset
         offset.y += math.sin(pitch_rad) * self.aim_offset.z * 0.5
 
-        camera_pos = target_pos + offset
+        eye = target_pos + Vec3(0, self.aim_offset.y, 0)
+        camera_pos = self._spring_arm(eye, target_pos + offset)
         camera.position = lerp(camera.position, camera_pos, delta * self.lerp_speed)
 
         look_target = target_pos + Vec3(0, 1.2, 0)

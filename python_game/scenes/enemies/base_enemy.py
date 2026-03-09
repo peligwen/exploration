@@ -1,5 +1,5 @@
 """Base enemy controller. Uses state machine for behavior."""
-from ursina import Entity, Vec3, color, time, lerp
+from ursina import Entity, Vec3, color, time, lerp, raycast
 import math
 
 from scripts.autoload.game_manager import game_manager
@@ -70,9 +70,23 @@ class BaseEnemy(Entity):
 
         self.state_machine.update(dt)
 
-        # TODO(migration): No wall collision — enemies walk through all walls and pillars.
-        # Same issue as player._apply_physics(). Need horizontal raycasts or Ursina collider
-        # integration to prevent enemies from walking through arena geometry.
+        # Horizontal wall collision — slide along surfaces
+        horiz = Vec3(self.velocity.x, 0, self.velocity.z)
+        if horiz.length() > 0.001:
+            horiz_dir = horiz.normalized()
+            step = horiz.length() * dt
+            skin = 0.6  # half enemy width approximation
+            origin = self.position + Vec3(0, 0.6, 0)
+            hit = raycast(origin, horiz_dir, distance=step + skin, ignore=[self])
+            if hit.hit and hit.distance <= step + skin:
+                wall_normal = Vec3(hit.world_normal.x, 0, hit.world_normal.z)
+                if wall_normal.length() > 0.01:
+                    wall_normal = wall_normal.normalized()
+                    dot = self.velocity.x * wall_normal.x + self.velocity.z * wall_normal.z
+                    if dot < 0:
+                        self.velocity.x -= dot * wall_normal.x
+                        self.velocity.z -= dot * wall_normal.z
+
         # Apply physics
         self.position += self.velocity * dt
 

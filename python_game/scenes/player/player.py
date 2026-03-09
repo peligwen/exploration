@@ -1,7 +1,7 @@
 """Player controller. Delegates behavior to the state machine.
 Provides shared state and utilities that all player states access.
 """
-from ursina import Entity, Vec3, Vec2, held_keys, mouse, time, lerp, color
+from ursina import Entity, Vec3, Vec2, held_keys, mouse, time, lerp, color, raycast
 import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED
@@ -196,23 +196,34 @@ class Player(Entity):
         self.grounded = ray.hit
 
     def _apply_physics(self, delta: float):
-        """Apply velocity to position with simple collision."""
-        # TODO(migration): No wall collision at all — player walks through all walls and
-        # pillars. GDScript uses CharacterBody3D.move_and_slide() which handles wall sliding
-        # automatically. Implement horizontal raycasts or use Ursina's collider system to
-        # prevent walking through geometry. Floor clamping at y=0.9 is also hardcoded and
-        # won't work for multi-level terrain.
-        # Clamp fall speed
+        """Apply velocity with move-and-slide wall collision."""
         if self.velocity.y < -50:
             self.velocity.y = -50
 
-        # Apply velocity
-        movement = self.velocity * delta
+        # --- Horizontal wall collision (move-and-slide) ---
+        horiz = Vec3(self.velocity.x, 0, self.velocity.z)
+        if horiz.length() > 0.001:
+            horiz_dir = horiz.normalized()
+            step = horiz.length() * delta
+            # Cast from chest height to avoid floor false-positives
+            origin = self.position + Vec3(0, 0.6, 0)
+            skin = 0.3  # capsule radius approximation
+            hit = raycast(origin, horiz_dir, distance=step + skin,
+                          ignore=[self, self.model_pivot])
+            if hit.hit and hit.distance <= step + skin:
+                wall_normal = Vec3(hit.world_normal.x, 0, hit.world_normal.z)
+                if wall_normal.length() > 0.01:
+                    wall_normal = wall_normal.normalized()
+                    # Remove the velocity component going into the wall (slide)
+                    dot = self.velocity.x * wall_normal.x + self.velocity.z * wall_normal.z
+                    if dot < 0:
+                        self.velocity.x -= dot * wall_normal.x
+                        self.velocity.z -= dot * wall_normal.z
 
-        # Simple collision: try to move, check for ground
-        self.position += movement
+        # --- Apply full movement ---
+        self.position += self.velocity * delta
 
-        # Floor clamping
+        # --- Floor clamping ---
         if self.position.y < 0.9:
             self.position = Vec3(self.position.x, 0.9, self.position.z)
             self.velocity.y = 0
