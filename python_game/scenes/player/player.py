@@ -186,7 +186,6 @@ class Player(Entity):
 
     def _check_grounded(self):
         """Simple ground check using raycast."""
-        from ursina import raycast, Vec3
         ray = raycast(
             self.position + Vec3(0, 0.1, 0),
             Vec3(0, -1, 0),
