@@ -23,12 +23,8 @@ class StateMachine:
             self.current_state = self.states[initial_state_name]
             self.current_state.enter("")
 
-    def transition_to(self, state_name: str):
-        # TODO(migration): GDScript transition_to() accepts an optional msg: Dictionary
-        # parameter (e.g. transition_to("Hurt", {"damage_info": info})). The Python version
-        # only passes previous_state name. Add a msg: dict = None parameter and forward it
-        # to State.enter() so states can receive transition context (damage info, etc.).
-        """Switch to a named state."""
+    def transition_to(self, state_name: str, msg: dict = None):
+        """Switch to a named state, forwarding an optional context dict to enter()."""
         if state_name not in self.states:
             print(f"StateMachine: No state named '{state_name}'")
             return
@@ -41,7 +37,7 @@ class StateMachine:
             self.current_state.exit()
 
         self.current_state = self.states[state_name]
-        self.current_state.enter(old_name)
+        self.current_state.enter(old_name, msg or {})
 
         if self._on_state_changed:
             self._on_state_changed(old_name, state_name)

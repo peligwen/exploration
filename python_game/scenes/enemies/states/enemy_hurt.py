@@ -9,7 +9,7 @@ class EnemyHurt(State):
         super().__init__("Hurt")
         self._timer = 0.0
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._timer = HURT_DURATION
         self.owner.velocity.x = 0
         self.owner.velocity.z = 0

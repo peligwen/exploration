@@ -9,7 +9,7 @@ class EnemyIdle(State):
         super().__init__("Idle")
         self._idle_timer = 0.0
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._idle_timer = random.uniform(1.0, 3.0)
         self.owner.velocity.x = 0
         self.owner.velocity.z = 0

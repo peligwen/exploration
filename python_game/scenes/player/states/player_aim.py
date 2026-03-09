@@ -9,7 +9,7 @@ class PlayerAim(State):
     def __init__(self):
         super().__init__("Aim")
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self.owner.is_aiming = True
         self.owner.camera_controller.set_mode(CameraMode.AIM)
 

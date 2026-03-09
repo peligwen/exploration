@@ -9,7 +9,7 @@ class PlayerShoot(State):
         super().__init__("Shoot")
         self._shoot_timer = 0.0
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self.owner.is_aiming = True
         self.owner.camera_controller.set_mode(CameraMode.AIM)
         self._fire()

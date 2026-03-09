@@ -66,9 +66,10 @@ class Player(Entity):
         self.camera_controller = CameraController(self)
 
         # Health component
-        self.health = HealthComponent(max_hp=100.0)
+        self.health = HealthComponent(max_hp=100.0, iframe_duration=0.3)
         self.health.owner = self
         self.health.on_health_changed = self._on_health_changed
+        self.health.on_damage_taken = self._on_damage_taken
         self.health.on_died = self._on_died
 
         # State machine (states are added by the arena/scene setup)
@@ -115,7 +116,9 @@ class Player(Entity):
         self._apply_physics(dt)
 
     def input(self, key):
-        """Handle input events."""
+        """Handle input events. Escape is reserved for the global pause handler."""
+        if key in ('escape', 'escape up'):
+            return
         is_press = not key.endswith(' up')
         actual_key = key[:-3] if not is_press else key  # strip ' up'
         self.state_machine.handle_input(actual_key, is_press)
@@ -128,9 +131,7 @@ class Player(Entity):
 
         forward = self.camera_controller.get_camera_forward()
         right = self.camera_controller.get_camera_right()
-        # TODO(migration): Y-axis is not inverted here. GDScript uses (forward * -input.y)
-        # because Godot's input Y-axis points down. Ursina's held_keys w/s may already be
-        # correct, but verify — if forward/backward movement is inverted, negate move.y.
+        # Ursina w/s give positive/negative y as expected (no inversion needed)
         direction = (forward * move.y + right * move.x)
         if direction.length() > 0:
             direction = direction.normalized()
@@ -146,17 +147,14 @@ class Player(Entity):
             self.rotate_model_to_direction(direction, delta)
 
     def decelerate_horizontal(self, delta: float, rate: float = -1.0):
-        """Smoothly decelerates horizontal velocity toward zero."""
-        # TODO(migration): GDScript uses move_toward() (linear deceleration toward zero).
-        # This multiplicative approach (exponential decay) feels different and can overshoot
-        # to negative values with large delta*rate > 1.0. Replace with:
-        #   self.velocity.x = move_toward(self.velocity.x, 0, rate * delta)
-        #   self.velocity.z = move_toward(self.velocity.z, 0, rate * delta)
+        """Linearly decelerates horizontal velocity toward zero (move_toward behaviour)."""
         if rate < 0.0:
             rate = self.move_speed * DECEL_FACTOR
-        factor = max(0, 1.0 - rate * delta)
-        self.velocity.x *= factor
-        self.velocity.z *= factor
+        step = rate * delta
+        vx = self.velocity.x
+        vz = self.velocity.z
+        self.velocity.x = vx - max(-step, min(step, vx))
+        self.velocity.z = vz - max(-step, min(step, vz))
 
     def apply_aim_physics(self, delta: float):
         """Shared aim/shoot movement: strafe at aim_speed, face camera direction."""
@@ -174,19 +172,15 @@ class Player(Entity):
             self.camera_controller.rotate_camera(look.x, look.y, delta)
 
     def rotate_model_to_direction(self, direction: Vec3, delta: float):
-        """Smoothly rotate the player to face movement direction."""
-        # TODO(migration): This rotates self.rotation_y (the Entity itself), which also
-        # rotates the collider. GDScript rotates model.rotation.y (a child node) separately
-        # from the physics body. Rotate self.model_pivot.rotation_y instead of self.rotation_y
-        # to keep the collider axis-aligned.
+        """Smoothly rotate the visual model pivot to face movement direction.
+        The collider (self) is left axis-aligned."""
         if direction.length() < INPUT_DEADZONE:
             return
         self.facing_direction = direction
         target_angle = math.degrees(math.atan2(direction.x, direction.z))
-        current_y = self.rotation_y
-        # Lerp rotation
+        current_y = self.model_pivot.rotation_y
         diff = (target_angle - current_y + 180) % 360 - 180
-        self.rotation_y += diff * min(delta * 12.0, 1.0)
+        self.model_pivot.rotation_y += diff * min(delta * 12.0, 1.0)
 
     def _check_grounded(self):
         """Simple ground check using raycast."""
@@ -222,6 +216,10 @@ class Player(Entity):
             self.velocity.y = 0
             self.grounded = True
 
+    def _on_damage_taken(self, damage_info):
+        if not self.health.is_dead:
+            self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
+
     def _on_health_changed(self, current: float, maximum: float):
         # TODO(migration): GDScript version triggers heartbeat haptic feedback when HP drops
         # below 25%. Add:
@@ -234,11 +232,10 @@ class Player(Entity):
         self.state_machine.transition_to("Dead")
 
     def get_save_data(self) -> dict:
+        wp = self.world_position
         return {
             "id": "player",
-            # TODO(migration): GDScript uses global_position. self.position in Ursina is
-            # local if parented. Use self.world_position for correct save data.
-            "position": [self.position.x, self.position.y, self.position.z],
+            "position": [wp.x, wp.y, wp.z],
             "health": self.health.get_save_data(),
         }
 

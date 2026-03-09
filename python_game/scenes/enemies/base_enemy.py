@@ -11,6 +11,8 @@ from scripts.resources.damage_info import DamageInfo, DamageType
 class BaseEnemy(Entity):
     """Base enemy with state machine, health, and navigation."""
 
+    _id_counter: int = 0
+
     def __init__(self, **kwargs):
         super().__init__(
             model='cube',
@@ -35,10 +37,8 @@ class BaseEnemy(Entity):
         # Runtime
         self.target = None  # Usually the player
         self.gravity_strength = 20.0
-        # TODO(migration): id(self) returns a memory address that changes every run. Not
-        # stable for save/load across sessions. Use a deterministic ID like a UUID or an
-        # auto-incrementing counter stored on the class.
-        self.unique_id = str(id(self))
+        BaseEnemy._id_counter += 1
+        self.unique_id = f"enemy_{BaseEnemy._id_counter}"
         self.velocity = Vec3(0, 0, 0)
         self.grounded = True
 
@@ -141,7 +141,7 @@ class BaseEnemy(Entity):
 
     def _on_damage_taken(self, damage_info):
         if not self.health.is_dead:
-            self.state_machine.transition_to("Hurt")
+            self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
 
     def get_save_data(self) -> dict:
         return {

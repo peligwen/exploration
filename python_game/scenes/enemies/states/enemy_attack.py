@@ -8,7 +8,7 @@ class EnemyAttack(State):
         self._attack_timer = 0.0
         self._has_dealt_damage = False
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._attack_timer = self.owner.attack_cooldown
         self._has_dealt_damage = False
         self.owner.velocity.x = 0

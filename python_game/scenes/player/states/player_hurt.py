@@ -11,13 +11,13 @@ class PlayerHurt(State):
         super().__init__("Hurt")
         self._timer = 0.0
 
-    def enter(self, previous_state: str):
-        # TODO(migration): No knockback applied from damage. GDScript Hurt state reads
-        # DamageInfo.knockback_force and applies it to player velocity. The state machine
-        # transition_to() needs to pass damage_info via msg dict (see state_machine.py TODO),
-        # then apply: self.owner.velocity += damage_info.knockback_force
+    def enter(self, previous_state: str, msg: dict = None):
         self._timer = HURT_DURATION
         self.owner.camera_controller.add_shake(0.5)
+        if msg:
+            damage_info = msg.get("damage_info")
+            if damage_info and damage_info.knockback_force.length() > 0:
+                self.owner.velocity += damage_info.knockback_force
 
     def process_state(self, delta: float):
         player = self.owner

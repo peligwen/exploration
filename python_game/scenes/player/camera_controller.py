@@ -1,11 +1,10 @@
 """Independent camera system. Follows a target entity.
 Modes: Follow, Aim, Shake, Death.
 """
-# TODO(migration): 'random' imported from ursina — should be 'import random' from Python
-# stdlib. Ursina re-exports it but this is fragile and may break in future versions.
-from ursina import Entity, camera, Vec3, lerp, mouse, time, random
+from ursina import Entity, camera, Vec3, lerp, mouse, time
 from enum import Enum
 import math
+import random
 
 
 class CameraMode(Enum):
@@ -170,7 +169,4 @@ class CameraController:
         self._shake_amount = lerp(self._shake_amount, 0.0, delta * self._shake_decay)
         if self._shake_amount < 0.01:
             self._shake_amount = 0.0
-            # TODO(migration): GDScript resets camera.position = Vector3.ZERO when shake
-            # ends to clear residual offset. Without this, the camera stays at whatever
-            # the last shake offset was. The position set by _process_follow/_process_aim
-            # in the same frame partially masks this, but there may be a 1-frame jitter.
+            camera.position = Vec3(0, 0, 0)

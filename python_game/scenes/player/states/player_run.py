@@ -8,7 +8,7 @@ class PlayerRun(State):
     def __init__(self):
         super().__init__("Run")
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self.owner.is_sprinting = False
         self.owner.current_speed = self.owner.move_speed
 

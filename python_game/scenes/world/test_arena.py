@@ -119,15 +119,4 @@ def create_test_arena():
         hud.update_state_debug(new_name)
     player.state_machine._on_state_changed = on_state_changed
 
-    # TODO(migration): Dead code — handle_pause is defined but never connected to any input
-    # system. Pause is handled in main.py's global input() instead. Remove this dead code
-    # or connect it properly. Also, player._pause_menu is assigned but never used.
-    # Handle pause input
-    def handle_pause(key):
-        if key == 'escape':
-            pause_menu.toggle_pause()
-
-    # Store pause handler on player for input routing
-    player._pause_menu = pause_menu
-
     return player, enemies, hud, pause_menu

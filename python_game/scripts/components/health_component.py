@@ -15,22 +15,19 @@ class HealthComponent:
         self._iframe_timer = 0.0
         self.owner = None  # Set by the entity that owns this component
 
-        # TODO(migration): Single-callback pattern only supports one listener per event.
-        # GDScript signals support multiple connections. Use a list of callbacks or emit
-        # through EventBus so multiple systems (HUD, camera shake, etc.) can all react.
-        # Callbacks
+        # Callbacks (single-listener; cross-system reactions should use EventBus events)
         self.on_health_changed = None  # (current, maximum)
         self.on_died = None  # ()
         self.on_damage_taken = None  # (damage_info)
+        self._processing_damage = False
 
     def update(self, delta: float):
         if self._iframe_timer > 0.0:
             self._iframe_timer -= delta
 
     def take_damage(self, damage_info):
-        # TODO(migration): No re-entrancy guard. on_died callback could trigger another
-        # take_damage call before this one returns (e.g. explosion chain). Add a
-        # _processing_damage flag to prevent nested calls.
+        if self._processing_damage:
+            return
         if hasattr(self.owner, 'is_invincible') and self.owner.is_invincible:
             return
         if self.is_dead:
@@ -38,23 +35,27 @@ class HealthComponent:
         if self._iframe_timer > 0.0:
             return
 
-        self.current_hp -= damage_info.amount
-        self.current_hp = max(self.current_hp, 0.0)
+        self._processing_damage = True
+        try:
+            self.current_hp -= damage_info.amount
+            self.current_hp = max(self.current_hp, 0.0)
 
-        if self.iframe_duration > 0.0:
-            self._iframe_timer = self.iframe_duration
+            if self.iframe_duration > 0.0:
+                self._iframe_timer = self.iframe_duration
 
-        if self.on_health_changed:
-            self.on_health_changed(self.current_hp, self.max_hp)
-        if self.on_damage_taken:
-            self.on_damage_taken(damage_info)
-        event_bus.emit(DAMAGE_DEALT, damage_info)
+            if self.on_health_changed:
+                self.on_health_changed(self.current_hp, self.max_hp)
+            if self.on_damage_taken:
+                self.on_damage_taken(damage_info)
+            event_bus.emit(DAMAGE_DEALT, damage_info)
 
-        if self.current_hp <= 0.0:
-            self.is_dead = True
-            if self.on_died:
-                self.on_died()
-            event_bus.emit(ENTITY_DIED, self.owner, damage_info.source)
+            if self.current_hp <= 0.0:
+                self.is_dead = True
+                if self.on_died:
+                    self.on_died()
+                event_bus.emit(ENTITY_DIED, self.owner, damage_info.source)
+        finally:
+            self._processing_damage = False
 
     def heal(self, amount: float):
         if self.is_dead:
