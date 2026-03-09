@@ -85,12 +85,23 @@ class BaseEnemy(Entity):
         return float('inf')
 
     def can_see_target(self) -> bool:
-        # TODO(migration): No line-of-sight check — only checks distance. Enemy can "see"
-        # the player through walls and pillars. Add a raycast from self.position to
-        # target.position and verify no environment geometry blocks the line of sight.
+        """Returns True if target is within detection range with unobstructed line of sight."""
         if not self.target:
             return False
-        return self.get_distance_to_target() <= self.detection_range
+        if self.get_distance_to_target() > self.detection_range:
+            return False
+        # Raycast from eye height toward target eye height; ignore self and target
+        eye_offset = Vec3(0, 0.8, 0)
+        origin = self.position + eye_offset
+        target_pos = self.target.position + eye_offset
+        direction = (target_pos - origin)
+        distance = direction.length()
+        if distance < 0.01:
+            return True
+        from ursina import raycast
+        hit = raycast(origin, direction.normalized(), distance=distance,
+                      ignore=[self, self.target])
+        return not hit.hit
 
     def is_in_attack_range(self) -> bool:
         return self.get_distance_to_target() <= self.attack_range
