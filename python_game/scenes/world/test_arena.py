@@ -97,16 +97,18 @@ def create_test_arena():
     player.current_weapon = rifle
     event_bus.emit(PLAYER_AMMO_CHANGED, rifle.current_ammo, rifle.max_ammo)
 
-    # TODO(migration): No patrol points assigned to enemies. patrol_points list is empty,
-    # so enemies will idle forever after losing sight of the player (EnemyPatrol state has
-    # nothing to patrol between). Assign patrol waypoints for each enemy.
-
     # --- Enemies ---
-    enemy_positions = [Vec3(10, 1, 10), Vec3(-10, 1, -10), Vec3(15, 1, -5)]
+    # Each enemy gets a short patrol loop near its spawn so EnemyPatrol has waypoints.
+    enemy_patrol_data = [
+        (Vec3(10, 1, 10),  [Vec3(10, 1, 10), Vec3(10, 1, -5),  Vec3(18, 1, -5),  Vec3(18, 1, 10)]),
+        (Vec3(-10, 1, -10), [Vec3(-10, 1, -10), Vec3(-18, 1, -10), Vec3(-18, 1, 5), Vec3(-10, 1, 5)]),
+        (Vec3(15, 1, -5),  [Vec3(15, 1, -5),  Vec3(5, 1, -5),   Vec3(5, 1, -15),  Vec3(15, 1, -15)]),
+    ]
     enemies = []
-    for pos in enemy_positions:
+    for pos, patrol_points in enemy_patrol_data:
         enemy = BaseEnemy(position=pos)
         enemy.target = player
+        enemy.patrol_points = patrol_points
         _setup_enemy_states(enemy)
         enemies.append(enemy)
 

@@ -67,10 +67,8 @@ class CameraController:
         self._shake_amount = max(self._shake_amount, amount)
 
     def get_camera_forward(self) -> Vec3:
-        """Returns the flat (Y=0) forward direction of the camera."""
-        # TODO(migration): GDScript uses camera.global_transform.basis.z which accounts for
-        # all rotations (pitch, yaw, roll). This manual trig only uses yaw. If pitch affects
-        # aiming direction (e.g. shooting up/down), this will diverge from GDScript behavior.
+        """Returns the flat (Y=0) forward direction of the camera.
+        Yaw-only by design so ground movement is always horizontal."""
         rad = math.radians(self.yaw)
         forward = Vec3(-math.sin(rad), 0, -math.cos(rad))
         return forward.normalized()
