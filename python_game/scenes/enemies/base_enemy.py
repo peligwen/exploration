@@ -6,6 +6,7 @@ from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
 from scripts.components.health_component import HealthComponent
 from scripts.resources.damage_info import DamageInfo, DamageType
+from scripts.resources.collision_layers import LAYER_ENEMY
 
 
 class BaseEnemy(Entity):
@@ -33,6 +34,8 @@ class BaseEnemy(Entity):
         # Patrol
         self.patrol_points: list[Vec3] = []
         self.patrol_wait_time = 2.0
+
+        self.collision_group = LAYER_ENEMY
 
         # Runtime
         self.target = None  # Usually the player

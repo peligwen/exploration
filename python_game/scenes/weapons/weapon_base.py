@@ -5,6 +5,7 @@ import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED
 from scripts.resources.damage_info import DamageInfo, DamageType
+from scripts.resources.collision_layers import LAYER_PLAYER, PLAYER_WEAPON_HITTABLE
 
 
 class WeaponBase(Entity):
@@ -18,6 +19,7 @@ class WeaponBase(Entity):
             **kwargs
         )
         self.weapon_owner = owner_entity  # The player holding this weapon
+        self.collision_group = LAYER_PLAYER
 
         # Weapon stats
         self.weapon_name = "Weapon"
@@ -78,12 +80,23 @@ class WeaponBase(Entity):
             cos_p, sin_p = math.cos(pitch_offset), math.sin(pitch_offset)
             direction = (direction * cos_p + right * sin_p).normalized()
 
-        # TODO(migration): No collision layer filtering. GDScript sets collision_mask to
-        # layers 1|4|128 (Environment, Enemy, Destructible). This raycast hits everything
-        # including other weapons, UI entities, and the player's own model_pivot. Add
-        # Ursina-compatible layer filtering or tag-based ignore list.
+        # Build ignore list: skip entities that are explicitly tagged with a non-hittable
+        # collision_group. Untagged entities (arena geometry) remain hittable by default.
+        # Mirrors GDScript collision_mask layers 1|4|128 (Environment, Enemy, Destructible).
+        from ursina import scene
+        ignore_list = [
+            e for e in scene.entities
+            if getattr(e, 'collision_group', None) is not None
+            and e.collision_group not in PLAYER_WEAPON_HITTABLE
+        ]
+        # Always exclude self and owner even if untagged
+        if self not in ignore_list:
+            ignore_list.append(self)
+        if self.weapon_owner and self.weapon_owner not in ignore_list:
+            ignore_list.append(self.weapon_owner)
+
         hit = raycast(origin, direction, distance=self.range_distance,
-                      ignore=[self, self.weapon_owner])
+                      ignore=ignore_list)
         if hit.hit:
             self._on_hit(hit.entity, hit.world_point, hit.world_normal)
 

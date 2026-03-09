@@ -5,6 +5,7 @@ from ursina import Entity, Vec3, Vec2, held_keys, mouse, time, lerp, color
 import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED
+from scripts.resources.collision_layers import LAYER_PLAYER
 from scripts.autoload.input_manager import input_manager
 from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
@@ -59,7 +60,8 @@ class Player(Entity):
 
         # Model (visual child for rotation separate from physics)
         self.model_pivot = Entity(parent=self, model='cube', color=color.azure,
-                                  scale=(1, 1, 1), origin=(0, -0.5, 0))
+                                  scale=(1, 1, 1), origin=(0, -0.5, 0),
+                                  collision_group=LAYER_PLAYER)
         self.model = None  # Use model_pivot directly
 
         # Camera controller
