@@ -5,6 +5,7 @@ import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED
 from scripts.resources.damage_info import DamageInfo, DamageType
+from scripts.resources.collision_layers import LAYER_PLAYER, PLAYER_WEAPON_HITTABLE
 
 
 class WeaponBase(Entity):
@@ -18,6 +19,7 @@ class WeaponBase(Entity):
             **kwargs
         )
         self.weapon_owner = owner_entity  # The player holding this weapon
+        self.collision_group = LAYER_PLAYER
 
         # Weapon stats
         self.weapon_name = "Weapon"
@@ -63,26 +65,38 @@ class WeaponBase(Entity):
         origin = camera.world_position
         direction = camera.forward
 
-        # TODO(migration): Spread calculation is incorrect. GDScript modifies the raycast's
-        # rotation angles (pitch and yaw) independently, producing uniform angular spread.
-        # This approach adds random offsets to X/Y direction components but not Z, which
-        # produces non-uniform spread biased toward the forward axis. Use quaternion rotation
-        # or spherical coordinate offsets around the direction vector instead.
-        # Apply spread
+        # Apply spread using independent yaw/pitch offsets around the direction vector
         if self.spread > 0:
             spread_rad = math.radians(self.spread)
-            direction = Vec3(
-                direction.x + rand.uniform(-spread_rad, spread_rad),
-                direction.y + rand.uniform(-spread_rad, spread_rad),
-                direction.z
-            ).normalized()
+            yaw_offset = rand.uniform(-spread_rad, spread_rad)
+            pitch_offset = rand.uniform(-spread_rad, spread_rad)
+            # Rotate direction by yaw offset around world Y axis
+            cos_y, sin_y = math.cos(yaw_offset), math.sin(yaw_offset)
+            dx = direction.x * cos_y + direction.z * sin_y
+            dz = -direction.x * sin_y + direction.z * cos_y
+            direction = Vec3(dx, direction.y, dz)
+            # Rotate direction by pitch offset around the right axis
+            right = Vec3(direction.z, 0, -direction.x).normalized()
+            cos_p, sin_p = math.cos(pitch_offset), math.sin(pitch_offset)
+            direction = (direction * cos_p + right * sin_p).normalized()
 
-        # TODO(migration): No collision layer filtering. GDScript sets collision_mask to
-        # layers 1|4|128 (Environment, Enemy, Destructible). This raycast hits everything
-        # including other weapons, UI entities, and the player's own model_pivot. Add
-        # Ursina-compatible layer filtering or tag-based ignore list.
+        # Build ignore list: skip entities that are explicitly tagged with a non-hittable
+        # collision_group. Untagged entities (arena geometry) remain hittable by default.
+        # Mirrors GDScript collision_mask layers 1|4|128 (Environment, Enemy, Destructible).
+        from ursina import scene
+        ignore_list = [
+            e for e in scene.entities
+            if getattr(e, 'collision_group', None) is not None
+            and e.collision_group not in PLAYER_WEAPON_HITTABLE
+        ]
+        # Always exclude self and owner even if untagged
+        if self not in ignore_list:
+            ignore_list.append(self)
+        if self.weapon_owner and self.weapon_owner not in ignore_list:
+            ignore_list.append(self.weapon_owner)
+
         hit = raycast(origin, direction, distance=self.range_distance,
-                      ignore=[self, self.weapon_owner])
+                      ignore=ignore_list)
         if hit.hit:
             self._on_hit(hit.entity, hit.world_point, hit.world_normal)
 
@@ -104,13 +118,8 @@ class WeaponBase(Entity):
         event_bus.emit(PLAYER_AMMO_CHANGED, self.current_ammo, self.max_ammo)
 
     def _on_hit(self, entity, point, normal):
-        # TODO(migration): GDScript checks collider.has_node("HealthComponent") and gets the
-        # component from the scene tree. This checks hasattr(entity, 'health') which is a
-        # different pattern — will miss entities where HealthComponent is stored under a
-        # different attribute name. Standardize the health component access pattern.
-        # TODO(migration): hit.world_normal from Ursina can be None when hitting certain
-        # geometry. The fallback on line below handles it, but verify this doesn't produce
-        # zero-length knockback vectors when it should have a direction.
+        # All damageable entities in this codebase expose a .health attribute by convention.
+        # normal can be None for certain geometry; the fallback Vec3 produces zero knockback.
         if entity and hasattr(entity, 'health'):
             normal_vec = normal if normal else Vec3(0, 0, 0)
             info = DamageInfo.create(

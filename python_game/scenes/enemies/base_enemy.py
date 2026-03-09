@@ -1,15 +1,18 @@
 """Base enemy controller. Uses state machine for behavior."""
-from ursina import Entity, Vec3, color, time, lerp
+from ursina import Entity, Vec3, color, time, lerp, raycast
 import math
 
 from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
 from scripts.components.health_component import HealthComponent
 from scripts.resources.damage_info import DamageInfo, DamageType
+from scripts.resources.collision_layers import LAYER_ENEMY
 
 
 class BaseEnemy(Entity):
     """Base enemy with state machine, health, and navigation."""
+
+    _id_counter: int = 0
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -32,13 +35,13 @@ class BaseEnemy(Entity):
         self.patrol_points: list[Vec3] = []
         self.patrol_wait_time = 2.0
 
+        self.collision_group = LAYER_ENEMY
+
         # Runtime
         self.target = None  # Usually the player
         self.gravity_strength = 20.0
-        # TODO(migration): id(self) returns a memory address that changes every run. Not
-        # stable for save/load across sessions. Use a deterministic ID like a UUID or an
-        # auto-incrementing counter stored on the class.
-        self.unique_id = str(id(self))
+        BaseEnemy._id_counter += 1
+        self.unique_id = f"enemy_{BaseEnemy._id_counter}"
         self.velocity = Vec3(0, 0, 0)
         self.grounded = True
 
@@ -67,9 +70,23 @@ class BaseEnemy(Entity):
 
         self.state_machine.update(dt)
 
-        # TODO(migration): No wall collision — enemies walk through all walls and pillars.
-        # Same issue as player._apply_physics(). Need horizontal raycasts or Ursina collider
-        # integration to prevent enemies from walking through arena geometry.
+        # Horizontal wall collision — slide along surfaces
+        horiz = Vec3(self.velocity.x, 0, self.velocity.z)
+        if horiz.length() > 0.001:
+            horiz_dir = horiz.normalized()
+            step = horiz.length() * dt
+            skin = 0.6  # half enemy width approximation
+            origin = self.position + Vec3(0, 0.6, 0)
+            hit = raycast(origin, horiz_dir, distance=step + skin, ignore=[self])
+            if hit.hit and hit.distance <= step + skin:
+                wall_normal = Vec3(hit.world_normal.x, 0, hit.world_normal.z)
+                if wall_normal.length() > 0.01:
+                    wall_normal = wall_normal.normalized()
+                    dot = self.velocity.x * wall_normal.x + self.velocity.z * wall_normal.z
+                    if dot < 0:
+                        self.velocity.x -= dot * wall_normal.x
+                        self.velocity.z -= dot * wall_normal.z
+
         # Apply physics
         self.position += self.velocity * dt
 
@@ -85,12 +102,23 @@ class BaseEnemy(Entity):
         return float('inf')
 
     def can_see_target(self) -> bool:
-        # TODO(migration): No line-of-sight check — only checks distance. Enemy can "see"
-        # the player through walls and pillars. Add a raycast from self.position to
-        # target.position and verify no environment geometry blocks the line of sight.
+        """Returns True if target is within detection range with unobstructed line of sight."""
         if not self.target:
             return False
-        return self.get_distance_to_target() <= self.detection_range
+        if self.get_distance_to_target() > self.detection_range:
+            return False
+        # Raycast from eye height toward target eye height; ignore self and target
+        eye_offset = Vec3(0, 0.8, 0)
+        origin = self.position + eye_offset
+        target_pos = self.target.position + eye_offset
+        direction = (target_pos - origin)
+        distance = direction.length()
+        if distance < 0.01:
+            return True
+        from ursina import raycast
+        hit = raycast(origin, direction.normalized(), distance=distance,
+                      ignore=[self, self.target])
+        return not hit.hit
 
     def is_in_attack_range(self) -> bool:
         return self.get_distance_to_target() <= self.attack_range
@@ -141,7 +169,7 @@ class BaseEnemy(Entity):
 
     def _on_damage_taken(self, damage_info):
         if not self.health.is_dead:
-            self.state_machine.transition_to("Hurt")
+            self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
 
     def get_save_data(self) -> dict:
         return {

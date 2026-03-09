@@ -9,7 +9,7 @@ class EnemyPatrol(State):
         self._wait_timer = 0.0
         self._waiting = False
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._waiting = False
         if len(self.owner.patrol_points) == 0:
             self.transition_to("Idle")

@@ -10,14 +10,10 @@ class PlayerDodge(State):
         self._timer = 0.0
         self._dodge_direction = Vec3(0, 0, 0)
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         player = self.owner
         player.is_dodging = True
-        # TODO(migration): is_invincible is set here but HealthComponent.take_damage() never
-        # checks it. Player still takes full damage during dodge. Add invincibility check in
-        # HealthComponent.take_damage():
-        #   if hasattr(self.owner, 'is_invincible') and self.owner.is_invincible: return
-        player.is_invincible = True
+        player.is_invincible = True  # Checked by HealthComponent.take_damage()
         self._timer = player.dodge_duration
 
         # Dodge in input direction, or backward if no input

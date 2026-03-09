@@ -8,7 +8,7 @@ class PlayerJump(State):
     def __init__(self):
         super().__init__("Jump")
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         player = self.owner
         now = time.time()
         can_jump = player.grounded or (now - player.last_grounded_time) < player.coyote_time

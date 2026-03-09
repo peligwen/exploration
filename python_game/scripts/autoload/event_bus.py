@@ -22,33 +22,44 @@ class _EventBus:
 
     def emit(self, signal_name: str, *args, **kwargs):
         """Emit a signal, calling all connected callbacks."""
-        # TODO(migration): Iterating self._listeners[signal_name] directly is unsafe — if a
-        # callback connects or disconnects a listener during emission, the list mutates mid-
-        # iteration and will crash. Copy the list first:
-        #   for callback in list(self._listeners[signal_name]):
-        for callback in self._listeners[signal_name]:
+        for callback in list(self._listeners[signal_name]):
             callback(*args, **kwargs)
 
 
-# TODO(migration): GDScript signals have typed parameters (e.g. damage_dealt(damage_info: Resource),
-# entity_died(entity: Node3D)). This Python version uses bare strings with no argument validation.
-# Add type-checked signal definitions or at least document expected signatures per signal to prevent
-# silent arg mismatches.
-
 # Signal name constants
-DAMAGE_DEALT = "damage_dealt"
-ENTITY_DIED = "entity_died"
-ITEM_PICKED_UP = "item_picked_up"
-WEAPON_SWITCHED = "weapon_switched"
-QUEST_UPDATED = "quest_updated"
-PLAYER_LEVELED_UP = "player_leveled_up"
-XP_GAINED = "xp_gained"
-ZONE_ENTERED = "zone_entered"
+DAMAGE_DEALT        = "damage_dealt"
+ENTITY_DIED         = "entity_died"
+ITEM_PICKED_UP      = "item_picked_up"
+WEAPON_SWITCHED     = "weapon_switched"
+QUEST_UPDATED       = "quest_updated"
+PLAYER_LEVELED_UP   = "player_leveled_up"
+XP_GAINED           = "xp_gained"
+ZONE_ENTERED        = "zone_entered"
 DESTRUCTIBLE_BROKEN = "destructible_broken"
 PLAYER_HEALTH_CHANGED = "player_health_changed"
-PLAYER_AMMO_CHANGED = "player_ammo_changed"
-PLAYER_DIED = "player_died"
-PLAYER_RESPAWNED = "player_respawned"
+PLAYER_AMMO_CHANGED   = "player_ammo_changed"
+PLAYER_DIED           = "player_died"
+PLAYER_RESPAWNED      = "player_respawned"
+
+# Expected argument signatures for each signal.
+# Mirrors GDScript typed signal declarations; no runtime enforcement, but
+# connect() callers should match these to avoid silent arg mismatches.
+#   Format: signal_constant -> tuple of "arg_name: TypeName" strings.
+SIGNAL_SPECS: dict[str, tuple[str, ...]] = {
+    DAMAGE_DEALT:          ("damage_info: DamageInfo",),
+    ENTITY_DIED:           ("entity",),
+    ITEM_PICKED_UP:        ("item",),
+    WEAPON_SWITCHED:       ("weapon",),
+    QUEST_UPDATED:         ("quest_id: str", "status: str"),
+    PLAYER_LEVELED_UP:     ("new_level: int",),
+    XP_GAINED:             ("amount: float",),
+    ZONE_ENTERED:          ("zone_name: str",),
+    DESTRUCTIBLE_BROKEN:   ("entity",),
+    PLAYER_HEALTH_CHANGED: ("current: float", "maximum: float"),
+    PLAYER_AMMO_CHANGED:   ("current: int", "max_ammo: int"),
+    PLAYER_DIED:           (),
+    PLAYER_RESPAWNED:      (),
+}
 
 # Global singleton
 event_bus = _EventBus()

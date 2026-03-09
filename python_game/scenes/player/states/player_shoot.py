@@ -1,6 +1,6 @@
 """Player Shoot state — fire weapon continuously while held."""
-from ursina import held_keys
 from scripts.components.state import State
+from scripts.autoload.input_manager import input_manager
 from scenes.player.camera_controller import CameraMode
 
 
@@ -9,7 +9,7 @@ class PlayerShoot(State):
         super().__init__("Shoot")
         self._shoot_timer = 0.0
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self.owner.is_aiming = True
         self.owner.camera_controller.set_mode(CameraMode.AIM)
         self._fire()
@@ -21,13 +21,13 @@ class PlayerShoot(State):
         self._shoot_timer -= delta
 
         # Continuous fire while held
-        if held_keys['left mouse'] and self._shoot_timer <= 0.0:
+        if input_manager.is_action_held('fire') and self._shoot_timer <= 0.0:
             self._fire()
             return
 
         # Release fire
-        if not held_keys['left mouse']:
-            if held_keys['right mouse']:
+        if not input_manager.is_action_held('fire'):
+            if input_manager.is_action_held('aim'):
                 self.transition_to("Aim")
             else:
                 self.transition_to("Idle")
@@ -38,9 +38,8 @@ class PlayerShoot(State):
         self.owner.camera_controller.set_mode(CameraMode.FOLLOW)
 
     def handle_input(self, key, is_press):
-        # TODO(migration): Missing reload input handling. GDScript Shoot state handles 'r'
-        # key press to trigger weapon.start_reload(). Add:
-        #   if key == 'r': self.owner.current_weapon.start_reload()
+        if key == 'r' and is_press and self.owner.current_weapon:
+            self.owner.current_weapon.start_reload()
         if key == 'left control':
             self.transition_to("Dodge")
 
@@ -50,6 +49,7 @@ class PlayerShoot(State):
             player.current_weapon.fire()
 
         player.camera_controller.add_shake(0.3)
-        # TODO(migration): Fire rate is hardcoded to 0.15 instead of using the weapon's
-        # fire_rate property. Should be: self._shoot_timer = player.current_weapon.fire_rate
-        self._shoot_timer = 0.15
+        if player.current_weapon:
+            self._shoot_timer = player.current_weapon.fire_rate
+        else:
+            self._shoot_timer = 0.15

@@ -68,16 +68,61 @@ class PauseMenu:
         self.sens_slider.on_value_changed = self._on_sensitivity_changed
         self._entities.append(self.sens_slider)
 
-        # TODO(migration): Missing settings controls that exist in GDScript version:
-        # - Aim assist strength slider (input_manager.aim_assist_strength)
-        # - Vibration intensity slider (input_manager.vibration_intensity)
-        # - Invert Y-axis toggle (input_manager.invert_y_mouse / invert_y_controller)
-        # Add these controls matching the GDScript pause_menu.gd implementation.
+        # Aim assist strength slider
+        self.aim_label = Text(
+            text=f"Aim Assist: {input_manager.aim_assist_strength:.0%}",
+            position=(0, -0.02),
+            origin=(0, 0),
+            scale=1,
+            parent=camera.ui,
+        )
+        self._entities.append(self.aim_label)
+
+        self.aim_slider = Slider(
+            min=0, max=1, default=input_manager.aim_assist_strength,
+            position=(-0.15, -0.07),
+            scale=(0.6, 0.8),
+            parent=camera.ui,
+            dynamic=True,
+        )
+        self.aim_slider.on_value_changed = self._on_aim_assist_changed
+        self._entities.append(self.aim_slider)
+
+        # Vibration intensity slider
+        self.vib_label = Text(
+            text=f"Vibration: {input_manager.vibration_intensity:.0%}",
+            position=(0, -0.14),
+            origin=(0, 0),
+            scale=1,
+            parent=camera.ui,
+        )
+        self._entities.append(self.vib_label)
+
+        self.vib_slider = Slider(
+            min=0, max=1, default=input_manager.vibration_intensity,
+            position=(-0.15, -0.19),
+            scale=(0.6, 0.8),
+            parent=camera.ui,
+            dynamic=True,
+        )
+        self.vib_slider.on_value_changed = self._on_vibration_changed
+        self._entities.append(self.vib_slider)
+
+        # Invert Y-axis toggle
+        self._invert_y_text = self._invert_label()
+        self.invert_y_button = Button(
+            text=self._invert_y_text,
+            position=(0, -0.28),
+            scale=(0.35, 0.06),
+            parent=camera.ui,
+            on_click=self._on_invert_y_toggled,
+        )
+        self._entities.append(self.invert_y_button)
 
         # Quit button
         self.quit_button = Button(
             text="Quit",
-            position=(0, -0.15),
+            position=(0, -0.37),
             scale=(0.3, 0.06),
             color=color.hsv(0, 0.8, 0.5),
             parent=camera.ui,
@@ -86,7 +131,8 @@ class PauseMenu:
         self._entities.append(self.quit_button)
 
     def toggle_pause(self):
-        if self.is_open:
+        self.is_open = not self.is_open
+        if not self.is_open:
             self.hide()
             game_manager.set_paused(False)
             mouse.locked = True
@@ -96,10 +142,6 @@ class PauseMenu:
             game_manager.set_paused(True)
             mouse.locked = False
             mouse.visible = True
-        # TODO(migration): is_open is toggled AFTER show()/hide() calls. If show()/hide()
-        # trigger callbacks that check self.is_open, they'll see stale state. Toggle first,
-        # then call show/hide, or use separate open()/close() methods.
-        self.is_open = not self.is_open
 
     def show(self):
         for e in self._entities:
@@ -109,7 +151,26 @@ class PauseMenu:
         for e in self._entities:
             e.enabled = False
 
+    def _invert_label(self) -> str:
+        state = "ON" if input_manager.invert_y_mouse else "OFF"
+        return f"Invert Y: {state}"
+
     def _on_sensitivity_changed(self):
         val = self.sens_slider.value
         input_manager.mouse_sensitivity = val
         self.sens_label.text = f"Sensitivity: {val:.0f}"
+
+    def _on_aim_assist_changed(self):
+        val = self.aim_slider.value
+        input_manager.aim_assist_strength = val
+        self.aim_label.text = f"Aim Assist: {val:.0%}"
+
+    def _on_vibration_changed(self):
+        val = self.vib_slider.value
+        input_manager.vibration_intensity = val
+        self.vib_label.text = f"Vibration: {val:.0%}"
+
+    def _on_invert_y_toggled(self):
+        input_manager.invert_y_mouse = not input_manager.invert_y_mouse
+        input_manager.invert_y_controller = input_manager.invert_y_mouse
+        self.invert_y_button.text = self._invert_label()

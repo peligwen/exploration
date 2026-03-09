@@ -9,7 +9,7 @@ class EnemyDead(State):
         super().__init__("Dead")
         self._despawn_timer = 3.0
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._despawn_timer = 3.0
         self.owner.velocity = Vec3(0, 0, 0)
         # Disable collision
@@ -22,9 +22,5 @@ class EnemyDead(State):
             self.owner.y -= delta * 0.5
         if self._despawn_timer <= 0.0:
             game_manager.unregister_saveable(self.owner)
-            # TODO(migration): destroy() removes the entity but state machine and state
-            # objects still hold references to self.owner. On the next frame, state_machine.
-            # update() will call self.current_state.process_state() on this dead state whose
-            # self.owner is now destroyed. Guard against this by setting state_machine.
-            # current_state = None before destroying, or disable updates on the owner first.
+            self.owner.state_machine.current_state = None
             destroy(self.owner)

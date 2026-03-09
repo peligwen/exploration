@@ -72,8 +72,8 @@ def test_signal_constants_are_strings():
     assert isinstance(ENTITY_DIED, str)
 
 
-# NOTE: There is a known re-entrancy bug (see TODO in event_bus.py): if a
-# callback connects or disconnects a listener *during* emission, the list
-# mutates mid-iteration and will raise RuntimeError.  This is not tested here
-# because the expected behaviour is a crash — fixing the bug is tracked
-# separately.
+# NOTE: emit() iterates a list() copy of listeners, so connect/disconnect
+# calls made from within a callback during emission are safe — they do not
+# raise RuntimeError.  A callback disconnected mid-emission may still fire
+# for the current event (it was already in the snapshot); a newly connected
+# callback will not fire until the next emission.  Both are expected behaviour.

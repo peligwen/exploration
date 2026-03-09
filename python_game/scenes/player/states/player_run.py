@@ -1,6 +1,7 @@
 """Player Run state — moving at walk speed."""
-from ursina import held_keys, time
+from ursina import time
 from scripts.components.state import State
+from scripts.autoload.input_manager import input_manager
 from scenes.player.player import INPUT_DEADZONE
 
 
@@ -8,7 +9,7 @@ class PlayerRun(State):
     def __init__(self):
         super().__init__("Run")
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self.owner.is_sprinting = False
         self.owner.current_speed = self.owner.move_speed
 
@@ -28,8 +29,12 @@ class PlayerRun(State):
             player.last_grounded_time = time.time()
 
         # Transitions
-        if held_keys['left shift']:
+        if input_manager.is_action_held('sprint'):
             self.transition_to("Sprint")
+            return
+
+        if input_manager.is_action_held('aim'):
+            self.transition_to("Aim")
             return
 
         if not player.grounded:
@@ -40,5 +45,3 @@ class PlayerRun(State):
             self.transition_to("Jump")
         elif key == 'left control':
             self.transition_to("Dodge")
-        elif key == 'right mouse down':
-            self.transition_to("Aim")

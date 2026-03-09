@@ -11,7 +11,7 @@ class State:
         self.state_machine = None
         self.owner = None  # The entity this state belongs to
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         """Called when this state becomes active."""
         pass
 
@@ -31,7 +31,7 @@ class State:
         """Called for input while this state is active."""
         pass
 
-    def transition_to(self, state_name: str):
+    def transition_to(self, state_name: str, msg: dict = None):
         """Request a transition to another state by name."""
         if self.state_machine:
-            self.state_machine.transition_to(state_name)
+            self.state_machine.transition_to(state_name, msg)
