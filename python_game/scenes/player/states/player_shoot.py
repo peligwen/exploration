@@ -50,6 +50,7 @@ class PlayerShoot(State):
             player.current_weapon.fire()
 
         player.camera_controller.add_shake(0.3)
-        # TODO(migration): Fire rate is hardcoded to 0.15 instead of using the weapon's
-        # fire_rate property. Should be: self._shoot_timer = player.current_weapon.fire_rate
-        self._shoot_timer = 0.15
+        if player.current_weapon:
+            self._shoot_timer = player.current_weapon.fire_rate
+        else:
+            self._shoot_timer = 0.15

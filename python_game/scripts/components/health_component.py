@@ -28,12 +28,11 @@ class HealthComponent:
             self._iframe_timer -= delta
 
     def take_damage(self, damage_info):
-        # TODO(migration): No invincibility check. GDScript player sets is_invincible=True
-        # during dodge, but this method never checks owner.is_invincible. Add:
-        #   if hasattr(self.owner, 'is_invincible') and self.owner.is_invincible: return
         # TODO(migration): No re-entrancy guard. on_died callback could trigger another
         # take_damage call before this one returns (e.g. explosion chain). Add a
         # _processing_damage flag to prevent nested calls.
+        if hasattr(self.owner, 'is_invincible') and self.owner.is_invincible:
+            return
         if self.is_dead:
             return
         if self._iframe_timer > 0.0:
