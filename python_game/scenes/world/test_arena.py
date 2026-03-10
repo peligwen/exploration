@@ -1,4 +1,4 @@
-"""Test arena for Milestone 1. Spawns player, enemies, weapon, and arena geometry."""
+"""Test arena for Milestone 1. Spawns player, enemies, weapon."""
 from ursina import Entity, Vec3, color
 
 from scenes.player.player import Player
@@ -27,16 +27,17 @@ from scenes.enemies.states.enemy_attack import EnemyAttack
 from scenes.enemies.states.enemy_hurt import EnemyHurt
 from scenes.enemies.states.enemy_dead import EnemyDead
 
-from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED, ENTITY_DIED
-
+from scripts.autoload.event_bus import (
+    event_bus, PLAYER_AMMO_CHANGED, ENTITY_DIED)
 
 import random
 
 
 class EnemySpawner(Entity):
-    """Respawns enemies after they die. Extends Entity for automatic update() calls."""
+    """Respawns enemies after they die."""
 
-    RESPAWN_DELAY = 5.0  # seconds after death event (enemy despawns after 3s, so +5s = 8s total)
+    # seconds after death (enemy despawns after 3s)
+    RESPAWN_DELAY = 5.0
 
     def __init__(self, player, enemy_patrol_data):
         super().__init__()
@@ -105,7 +106,7 @@ def create_test_arena():
     # --- Arena Geometry ---
 
     # Floor
-    floor = Entity(
+    Entity(
         model='plane',
         color=color.hsv(120, 0.3, 0.4),
         scale=(50, 1, 50),
@@ -130,7 +131,11 @@ def create_test_arena():
 
     # Pillars (cover)
     pillar_color = color.hsv(30, 0.2, 0.5)
-    for pos in [Vec3(5, 1.5, 5), Vec3(-5, 1.5, -5), Vec3(8, 1.5, -3), Vec3(-7, 1.5, 6)]:
+    pillar_positions = [
+        Vec3(5, 1.5, 5), Vec3(-5, 1.5, -5),
+        Vec3(8, 1.5, -3), Vec3(-7, 1.5, 6),
+    ]
+    for pos in pillar_positions:
         Entity(model='cube', color=pillar_color, scale=(1.5, 3, 1.5),
                position=pos, collider='box')
 
@@ -139,16 +144,29 @@ def create_test_arena():
     _setup_player_states(player)
 
     # Give player a rifle
-    rifle = Rifle(owner_entity=player, parent=player, position=Vec3(0.3, 0.5, -0.5))
+    rifle = Rifle(
+        owner_entity=player, parent=player,
+        position=Vec3(0.3, 0.5, -0.5))
     player.current_weapon = rifle
-    event_bus.emit(PLAYER_AMMO_CHANGED, rifle.current_ammo, rifle.max_ammo)
+    event_bus.emit(
+        PLAYER_AMMO_CHANGED,
+        rifle.current_ammo, rifle.max_ammo)
 
     # --- Enemies ---
-    # Each enemy gets a short patrol loop near its spawn so EnemyPatrol has waypoints.
+    # Each enemy gets a short patrol loop near its spawn.
     enemy_patrol_data = [
-        (Vec3(10, 1, 10),  [Vec3(10, 1, 10), Vec3(10, 1, -5),  Vec3(18, 1, -5),  Vec3(18, 1, 10)]),
-        (Vec3(-10, 1, -10), [Vec3(-10, 1, -10), Vec3(-18, 1, -10), Vec3(-18, 1, 5), Vec3(-10, 1, 5)]),
-        (Vec3(15, 1, -5),  [Vec3(15, 1, -5),  Vec3(5, 1, -5),   Vec3(5, 1, -15),  Vec3(15, 1, -15)]),
+        (Vec3(10, 1, 10), [
+            Vec3(10, 1, 10), Vec3(10, 1, -5),
+            Vec3(18, 1, -5), Vec3(18, 1, 10),
+        ]),
+        (Vec3(-10, 1, -10), [
+            Vec3(-10, 1, -10), Vec3(-18, 1, -10),
+            Vec3(-18, 1, 5), Vec3(-10, 1, 5),
+        ]),
+        (Vec3(15, 1, -5), [
+            Vec3(15, 1, -5), Vec3(5, 1, -5),
+            Vec3(5, 1, -15), Vec3(15, 1, -15),
+        ]),
     ]
     enemies = []
     for pos, patrol_points in enemy_patrol_data:

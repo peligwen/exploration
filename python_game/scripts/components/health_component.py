@@ -15,7 +15,7 @@ class HealthComponent:
         self._iframe_timer = 0.0
         self.owner = None  # Set by the entity that owns this component
 
-        # Callbacks (single-listener; cross-system reactions should use EventBus events)
+        # Callbacks (use EventBus for cross-system reactions)
         self.on_health_changed = None  # (current, maximum)
         self.on_died = None  # ()
         self.on_damage_taken = None  # (damage_info)

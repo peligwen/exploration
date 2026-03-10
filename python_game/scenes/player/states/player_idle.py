@@ -21,7 +21,8 @@ class PlayerIdle(State):
         if player.grounded:
             player.last_grounded_time = time.time()
 
-        # Continuous transitions (held state checks only — discrete actions use handle_input)
+        # Continuous transitions (held state checks only —
+        # discrete actions use handle_input)
         direction = player.get_camera_relative_input()
         if direction.length() > INPUT_DEADZONE:
             self.transition_to("Run")

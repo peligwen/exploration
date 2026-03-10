@@ -5,15 +5,15 @@ Every entity that participates in raycasts or physics should set
 strings — always import from here.
 """
 
-LAYER_ENVIRONMENT       = 'environment'
-LAYER_PLAYER            = 'player'
-LAYER_ENEMY             = 'enemy'
+LAYER_ENVIRONMENT = 'environment'
+LAYER_PLAYER = 'player'
+LAYER_ENEMY = 'enemy'
 LAYER_PLAYER_PROJECTILE = 'player_projectile'
-LAYER_ENEMY_PROJECTILE  = 'enemy_projectile'
-LAYER_PICKUP            = 'pickup'
-LAYER_TRIGGER           = 'trigger'
-LAYER_DESTRUCTIBLE      = 'destructible'
-LAYER_NPC               = 'npc'
+LAYER_ENEMY_PROJECTILE = 'enemy_projectile'
+LAYER_PICKUP = 'pickup'
+LAYER_TRIGGER = 'trigger'
+LAYER_DESTRUCTIBLE = 'destructible'
+LAYER_NPC = 'npc'
 
 # Groups that a player-fired weapon raycast should register hits on.
 # Mirrors GDScript collision_mask layers 1 | 4 | 128.

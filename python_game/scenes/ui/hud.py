@@ -1,5 +1,5 @@
-"""In-game HUD — health bar, ammo display, crosshair, kill counter, damage numbers."""
-from ursina import Text, Entity, camera, color, Vec2, Vec3, destroy
+"""In-game HUD — health bar, ammo, crosshair, kills, damage numbers."""
+from ursina import Text, Entity, camera, color, destroy
 import math
 
 from scripts.autoload.event_bus import (
@@ -146,7 +146,8 @@ class HUD:
         screen_pos = camera.main.world_to_screen_point(hit_pos)
         if screen_pos.z < 0:
             return
-        # Ursina UI coordinates: x in [-0.5 * aspect, 0.5 * aspect], y in [-0.5, 0.5]
+        # Ursina UI coords: x in [-0.5*aspect, 0.5*aspect],
+        # y in [-0.5, 0.5]
         ui_x = (screen_pos.x - 0.5) * camera.ui.aspect_ratio
         ui_y = screen_pos.y - 0.5
         dmg_color = color.red if damage_info.is_critical else color.yellow
