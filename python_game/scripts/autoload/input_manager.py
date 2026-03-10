@@ -87,6 +87,19 @@ class _InputManager:
         self.sprint_is_toggle = False
         self.auto_center_camera = True
 
+        # Initialise pygame joystick subsystem for analog stick / trigger
+        # reading.  Only the joystick module is needed — avoid full
+        # pygame.init() to prevent conflicts with Ursina's window.
+        self._joystick = None
+        try:
+            import pygame
+            pygame.joystick.init()
+            if pygame.joystick.get_count() > 0:
+                self._joystick = pygame.joystick.Joystick(0)
+                self._joystick.init()
+        except Exception:
+            pass
+
         # Glyph mappings for UI prompts (KB+M)
         self._kb_glyphs: dict[str, str] = {
             "jump":         "Space",
@@ -148,6 +161,30 @@ class _InputManager:
         return self._kb_glyphs.get(action_name, action_name)
 
     # ------------------------------------------------------------------
+    # Joystick helper
+    # ------------------------------------------------------------------
+
+    def _get_joystick(self):
+        """Return the cached pygame Joystick, or None.
+
+        Pumps pygame events so axis values stay fresh.  Re-checks for
+        newly connected controllers when no joystick is cached.
+        """
+        try:
+            import pygame
+            pygame.event.pump()
+            if self._joystick is not None:
+                return self._joystick
+            # Check for hot-plugged controller
+            if pygame.joystick.get_count() > 0:
+                self._joystick = pygame.joystick.Joystick(0)
+                self._joystick.init()
+                return self._joystick
+        except Exception:
+            pass
+        return None
+
+    # ------------------------------------------------------------------
     # Action queries — use instead of held_keys directly
     # ------------------------------------------------------------------
 
@@ -167,15 +204,11 @@ class _InputManager:
 
         # Analog triggers must be read as axes
         if action_name in ("fire", "aim"):
-            try:
-                import pygame
-                if pygame.joystick.get_count() > 0:
-                    js = pygame.joystick.Joystick(0)
-                    # Xbox layout: LT = axis 2, RT = axis 5
-                    axis = 5 if action_name == "fire" else 2
-                    return js.get_axis(axis) > self.trigger_threshold
-            except Exception:
-                pass
+            js = self._get_joystick()
+            if js is not None:
+                # Xbox layout: LT = axis 2, RT = axis 5
+                axis = 5 if action_name == "fire" else 2
+                return js.get_axis(axis) > self.trigger_threshold
 
         return False
 
@@ -195,21 +228,17 @@ class _InputManager:
             self.notify_input(DeviceType.KB_MOUSE)
             return Vec2(x, y)
 
-        try:
-            import pygame
-            if pygame.joystick.get_count() > 0:
-                js = pygame.joystick.Joystick(0)
-                sx = js.get_axis(0)           # left stick X
-                sy = -js.get_axis(1)          # left stick Y (up = negative)
-                if abs(sx) < self.stick_deadzone:
-                    sx = 0.0
-                if abs(sy) < self.stick_deadzone:
-                    sy = 0.0
-                if sx != 0.0 or sy != 0.0:
-                    self.notify_input(DeviceType.CONTROLLER)
-                    return Vec2(sx, sy)
-        except Exception:
-            pass
+        js = self._get_joystick()
+        if js is not None:
+            sx = js.get_axis(0)           # left stick X
+            sy = -js.get_axis(1)          # left stick Y (up = negative)
+            if abs(sx) < self.stick_deadzone:
+                sx = 0.0
+            if abs(sy) < self.stick_deadzone:
+                sy = 0.0
+            if sx != 0.0 or sy != 0.0:
+                self.notify_input(DeviceType.CONTROLLER)
+                return Vec2(sx, sy)
 
         return Vec2(0.0, 0.0)
 
@@ -220,24 +249,20 @@ class _InputManager:
         Returns Vec2(0,0) on KB+M or when no joystick is connected.
         Calls notify_input() when non-zero input is detected.
         """
-        try:
-            import pygame
-            if pygame.joystick.get_count() > 0:
-                js = pygame.joystick.Joystick(0)
-                raw_x = js.get_axis(2)   # right stick X
-                raw_y = js.get_axis(3)   # right stick Y
-                if abs(raw_x) < self.stick_deadzone:
-                    raw_x = 0.0
-                if abs(raw_y) < self.stick_deadzone:
-                    raw_y = 0.0
-                if raw_x != 0.0 or raw_y != 0.0:
-                    self.notify_input(DeviceType.CONTROLLER)
-                    if self.invert_y_controller:
-                        raw_y *= -1
-                    return Vec2(raw_x * self.stick_sensitivity,
-                                raw_y * self.stick_sensitivity)
-        except Exception:
-            pass
+        js = self._get_joystick()
+        if js is not None:
+            raw_x = js.get_axis(2)   # right stick X
+            raw_y = js.get_axis(3)   # right stick Y
+            if abs(raw_x) < self.stick_deadzone:
+                raw_x = 0.0
+            if abs(raw_y) < self.stick_deadzone:
+                raw_y = 0.0
+            if raw_x != 0.0 or raw_y != 0.0:
+                self.notify_input(DeviceType.CONTROLLER)
+                if self.invert_y_controller:
+                    raw_y *= -1
+                return Vec2(raw_x * self.stick_sensitivity,
+                            raw_y * self.stick_sensitivity)
         return Vec2(0, 0)
 
     # ------------------------------------------------------------------

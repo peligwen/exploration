@@ -143,7 +143,7 @@ class HUD:
         hit_pos = damage_info.hit_position
         if hit_pos is None or hit_pos.length() < 0.01:
             return
-        screen_pos = camera.main.world_to_screen_point(hit_pos)
+        screen_pos = camera.world_to_screen_point(hit_pos)
         if screen_pos.z < 0:
             return
         # Ursina UI coords: x in [-0.5*aspect, 0.5*aspect],
