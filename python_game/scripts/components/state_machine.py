@@ -23,8 +23,9 @@ class StateMachine:
             self.current_state = self.states[initial_state_name]
             self.current_state.enter("")
 
-    def transition_to(self, state_name: str, msg: dict = None):
-        """Switch to a named state, forwarding an optional context dict to enter()."""
+    def transition_to(self, state_name: str,
+                      msg: dict = None):
+        """Switch to a named state."""
         if state_name not in self.states:
             print(f"StateMachine: No state named '{state_name}'")
             return

@@ -31,7 +31,9 @@ class EnemyPatrol(State):
             enemy.velocity.z = 0
             if self._wait_timer <= 0.0:
                 self._waiting = False
-                self._current_point_index = (self._current_point_index + 1) % len(enemy.patrol_points)
+                n = len(enemy.patrol_points)
+                self._current_point_index = (
+                    self._current_point_index + 1) % n
             return
 
         target_point = enemy.patrol_points[self._current_point_index]

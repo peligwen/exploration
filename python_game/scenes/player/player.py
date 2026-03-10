@@ -1,17 +1,22 @@
 """Player controller. Delegates behavior to the state machine.
 Provides shared state and utilities that all player states access.
 """
-from ursina import Entity, Vec3, Vec2, held_keys, mouse, time, lerp, color, raycast
+from ursina import (Entity, Vec3, mouse, time, color,
+                    raycast)
 import math
 
-from scripts.autoload.event_bus import event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED
+from scripts.autoload.event_bus import (
+    event_bus, PLAYER_HEALTH_CHANGED, PLAYER_DIED)
+
 from scripts.resources.collision_layers import LAYER_PLAYER
 from scripts.resources.damage_info import DamageInfo, DamageType
-from scripts.autoload.input_manager import input_manager, DeviceType, CONTROLLER_KEY_MAP
+from scripts.autoload.input_manager import (
+    input_manager, DeviceType, CONTROLLER_KEY_MAP)
+
 from scripts.autoload.game_manager import game_manager
 from scripts.components.state_machine import StateMachine
 from scripts.components.health_component import HealthComponent
-from scenes.player.camera_controller import CameraController, CameraMode
+from scenes.player.camera_controller import CameraController
 
 
 INPUT_DEADZONE = 0.1
@@ -147,12 +152,12 @@ class Player(Entity):
                 self.health.take_damage(fall_dmg)
 
     def input(self, key):
-        """Handle input events. Escape is reserved for the global pause handler."""
+        """Handle input events. Escape is reserved for pause."""
         if key in ('escape', 'escape up'):
             return
 
-        # Remap controller button strings to their KB equivalents so that
-        # state handle_input() methods only need to handle one set of key names.
+        # Remap controller buttons to KB equivalents so
+        # handle_input() only needs one set of key names.
         is_release = key.endswith(' up')
         base_key = key[:-3] if is_release else key
         if base_key in CONTROLLER_KEY_MAP:
@@ -185,8 +190,9 @@ class Player(Entity):
             self.velocity.z = direction.z * air_speed * AIR_CONTROL_FACTOR
             self.rotate_model_to_direction(direction, delta)
 
-    def decelerate_horizontal(self, delta: float, rate: float = -1.0):
-        """Linearly decelerates horizontal velocity toward zero (move_toward behaviour)."""
+    def decelerate_horizontal(self, delta: float,
+                              rate: float = -1.0):
+        """Decelerate horizontal velocity toward zero."""
         if rate < 0.0:
             rate = self.move_speed * DECEL_FACTOR
         step = rate * delta
@@ -196,7 +202,7 @@ class Player(Entity):
         self.velocity.z = vz - max(-step, min(step, vz))
 
     def apply_aim_physics(self, delta: float):
-        """Shared aim/shoot movement: strafe at aim_speed, face camera direction."""
+        """Aim/shoot movement: strafe at aim_speed, face camera."""
         direction = self.get_camera_relative_input()
         if direction.length() > INPUT_DEADZONE:
             self.velocity.x = direction.x * self.aim_speed
@@ -251,7 +257,8 @@ class Player(Entity):
                 if wall_normal.length() > 0.01:
                     wall_normal = wall_normal.normalized()
                     # Remove the velocity component going into the wall (slide)
-                    dot = self.velocity.x * wall_normal.x + self.velocity.z * wall_normal.z
+                    dot = (self.velocity.x * wall_normal.x
+                           + self.velocity.z * wall_normal.z)
                     if dot < 0:
                         self.velocity.x -= dot * wall_normal.x
                         self.velocity.z -= dot * wall_normal.z
@@ -269,7 +276,8 @@ class Player(Entity):
         self.model_pivot.color = color.white
         self._flash_timer = FLASH_DURATION
         if not self.health.is_dead:
-            self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
+            self.state_machine.transition_to(
+                "Hurt", {"damage_info": damage_info})
 
     def _on_health_changed(self, current: float, maximum: float):
         if maximum > 0 and (current / maximum) < 0.25:

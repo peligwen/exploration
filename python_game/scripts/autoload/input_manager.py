@@ -2,7 +2,7 @@
 Tracks device type, manages settings, provides glyph lookup.
 Uses Ursina's held_keys and input system.
 """
-from ursina import held_keys, Vec2, mouse
+from ursina import held_keys, Vec2
 from enum import Enum
 from typing import Callable
 
@@ -72,15 +72,14 @@ class _InputManager:
         self._device_changed_callbacks: list[Callable[[DeviceType], None]] = []
 
         # Input settings
-        # GDScript mouse_sensitivity = 0.002 rad/px ≈ 0.1146 deg/px.
-        # Ursina mouse.velocity is in normalised screen space (delta / window_width).
-        # At 1920 px wide: 1 px → 0.000521 velocity units, so the equivalent
-        # Ursina sensitivity would be ≈ 220.  The value below is empirically
-        # calibrated for feel; adjust via the pause menu sensitivity slider.
+        # GDScript sensitivity = 0.002 rad/px ≈ 0.1146 deg/px.
+        # Ursina mouse.velocity is normalised screen space.
+        # Empirically calibrated; adjust via pause menu.
         self.mouse_sensitivity = 40.0
         self.stick_sensitivity = 3.0
         self.stick_deadzone = 0.2
-        self.trigger_threshold = 0.5   # Axis value at which a trigger counts as "held"
+        # Axis value at which a trigger counts as "held"
+        self.trigger_threshold = 0.5
         self.invert_y_mouse = False
         self.invert_y_controller = False
         self.aim_assist_strength = 0.5
@@ -125,13 +124,14 @@ class _InputManager:
     # Device detection
     # ------------------------------------------------------------------
 
-    def on_device_changed(self, callback: Callable[[DeviceType], None]) -> None:
-        """Register a callback invoked whenever the active input device changes."""
+    def on_device_changed(
+            self, callback: Callable[[DeviceType], None],
+    ) -> None:
+        """Register a device-changed callback."""
         self._device_changed_callbacks.append(callback)
 
     def notify_input(self, source: DeviceType) -> None:
-        """Call whenever a KB+M or controller event is detected.
-        Switches current_device and fires device_changed callbacks if needed."""
+        """Switch current_device and fire callbacks if needed."""
         if source != self.current_device:
             self.current_device = source
             for cb in self._device_changed_callbacks:
@@ -142,20 +142,20 @@ class _InputManager:
     # ------------------------------------------------------------------
 
     def get_action_glyph(self, action_name: str) -> str:
-        """Return the display label for an action based on the active device."""
+        """Return display label for an action."""
         if self.is_controller():
             return self._controller_glyphs.get(action_name, action_name)
         return self._kb_glyphs.get(action_name, action_name)
 
     # ------------------------------------------------------------------
-    # Action queries — use these in game code instead of held_keys directly
+    # Action queries — use instead of held_keys directly
     # ------------------------------------------------------------------
 
     def is_action_held(self, action_name: str) -> bool:
-        """Returns True if the KB+M or controller binding for the action is held.
+        """True if KB+M or controller binding is held.
 
-        Checks Ursina held_keys for keyboard/button inputs and pygame joystick
-        axes for analog triggers (fire = RT axis 5, aim = LT axis 2 on Xbox).
+        Checks held_keys for buttons and pygame axes
+        for triggers (fire=RT axis 5, aim=LT axis 2).
         """
         kb_key = _KB_ACTION_MAP.get(action_name)
         if kb_key and held_keys.get(kb_key, 0):
@@ -244,7 +244,9 @@ class _InputManager:
     # Haptic feedback
     # ------------------------------------------------------------------
 
-    def request_haptic(self, pattern_name: str, intensity_scale: float = 1.0) -> None:
+    def request_haptic(self, pattern_name: str,
+                       intensity_scale: float = 1.0
+                       ) -> None:
         """Play a named haptic pattern on the active controller.
 
         Patterns are defined in ``_HAPTIC_PATTERNS`` and scaled by both
@@ -263,9 +265,12 @@ class _InputManager:
         if pattern_name not in _HAPTIC_PATTERNS:
             return
         _low, _high, _dur = _HAPTIC_PATTERNS[pattern_name]
-        _strength = self.vibration_intensity * intensity_scale
+        _strength = self.vibration_intensity * intensity_scale  # noqa: F841
         # Platform rumble call goes here, e.g.:
-        #   joystick.rumble(_low * _strength, _high * _strength, int(_dur * 1000))
+        #   joystick.rumble(
+        #       _low * _strength, _high * _strength,
+        #       int(_dur * 1000)
+        #   )
 
 
 # Global singleton

@@ -1,7 +1,6 @@
 """Player Dead state — disable input, death camera orbit."""
 from ursina import Vec3
 from scripts.components.state import State
-from scripts.autoload.game_manager import game_manager
 from scenes.player.camera_controller import CameraMode
 
 RESPAWN_POSITION = Vec3(0, 0.9, 0)

@@ -1,6 +1,6 @@
 """Pause menu overlay with settings."""
 from ursina import (Entity, Text, Button, Slider, camera, color, mouse,
-                    application, Vec2, destroy)
+                    application)
 
 from scripts.autoload.input_manager import input_manager, DeviceType
 from scripts.autoload.game_manager import game_manager
@@ -12,7 +12,8 @@ class PauseMenu:
     def __init__(self):
         self.is_open = False
         self._entities = []
-        self._controller_entities = []  # aim assist + vibration (controller-only)
+        # aim assist + vibration (controller-only)
+        self._controller_entities = []
 
         # Build UI elements (initially hidden)
         self._build_ui()

@@ -19,7 +19,8 @@ class EnemyAttack(State):
         enemy.face_target(delta)
 
         # Deal damage partway through attack
-        if not self._has_dealt_damage and self._attack_timer < enemy.attack_cooldown * 0.5:
+        halfway = enemy.attack_cooldown * 0.5
+        if not self._has_dealt_damage and self._attack_timer < halfway:
             if enemy.is_in_attack_range():
                 enemy.deal_damage_to_target()
             self._has_dealt_damage = True

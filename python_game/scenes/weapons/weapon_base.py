@@ -5,7 +5,8 @@ import math
 
 from scripts.autoload.event_bus import event_bus, PLAYER_AMMO_CHANGED
 from scripts.resources.damage_info import DamageInfo, DamageType
-from scripts.resources.collision_layers import LAYER_PLAYER, PLAYER_WEAPON_HITTABLE
+from scripts.resources.collision_layers import (
+    LAYER_PLAYER, PLAYER_WEAPON_HITTABLE)
 
 
 class WeaponBase(Entity):
@@ -65,24 +66,28 @@ class WeaponBase(Entity):
         origin = camera.world_position
         direction = camera.forward
 
-        # Apply spread using independent yaw/pitch offsets around the direction vector
+        # Apply spread via independent yaw/pitch offsets
         if self.spread > 0:
             spread_rad = math.radians(self.spread)
             yaw_offset = rand.uniform(-spread_rad, spread_rad)
             pitch_offset = rand.uniform(-spread_rad, spread_rad)
             # Rotate direction by yaw offset around world Y axis
-            cos_y, sin_y = math.cos(yaw_offset), math.sin(yaw_offset)
+            cos_y = math.cos(yaw_offset)
+            sin_y = math.sin(yaw_offset)
             dx = direction.x * cos_y + direction.z * sin_y
             dz = -direction.x * sin_y + direction.z * cos_y
             direction = Vec3(dx, direction.y, dz)
             # Rotate direction by pitch offset around the right axis
             right = Vec3(direction.z, 0, -direction.x).normalized()
-            cos_p, sin_p = math.cos(pitch_offset), math.sin(pitch_offset)
-            direction = (direction * cos_p + right * sin_p).normalized()
+            cos_p = math.cos(pitch_offset)
+            sin_p = math.sin(pitch_offset)
+            direction = (
+                direction * cos_p + right * sin_p
+            ).normalized()
 
-        # Build ignore list: skip entities that are explicitly tagged with a non-hittable
-        # collision_group. Untagged entities (arena geometry) remain hittable by default.
-        # Mirrors GDScript collision_mask layers 1|4|128 (Environment, Enemy, Destructible).
+        # Build ignore list: skip entities tagged with
+        # a non-hittable collision_group. Untagged entities
+        # (arena geometry) remain hittable by default.
         from ursina import scene
         ignore_list = [
             e for e in scene.entities
@@ -115,11 +120,13 @@ class WeaponBase(Entity):
         self.is_reloading = False
         if self.on_reloaded:
             self.on_reloaded()
-        event_bus.emit(PLAYER_AMMO_CHANGED, self.current_ammo, self.max_ammo)
+        event_bus.emit(
+            PLAYER_AMMO_CHANGED,
+            self.current_ammo, self.max_ammo)
 
     def _on_hit(self, entity, point, normal):
-        # All damageable entities in this codebase expose a .health attribute by convention.
-        # normal can be None for certain geometry; the fallback Vec3 produces zero knockback.
+        # Damageable entities expose .health by convention.
+        # normal can be None; fallback Vec3 = zero knockback.
         if entity and hasattr(entity, 'health'):
             normal_vec = normal if normal else Vec3(0, 0, 0)
             info = DamageInfo.create(

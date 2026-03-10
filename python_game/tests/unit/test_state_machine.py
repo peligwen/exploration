@@ -18,7 +18,7 @@ class RecordingState(State):
         super().__init__(name)
         self._log = log
 
-    def enter(self, previous_state: str):
+    def enter(self, previous_state: str, msg: dict = None):
         self._log.append(f"{self.name}.enter({previous_state!r})")
 
     def exit(self):

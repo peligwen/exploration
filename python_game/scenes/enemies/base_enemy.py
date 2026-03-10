@@ -1,5 +1,5 @@
 """Base enemy controller. Uses state machine for behavior."""
-from ursina import Entity, Vec3, color, time, lerp, raycast
+from ursina import Entity, Vec3, color, time, raycast
 import math
 
 from scripts.autoload.game_manager import game_manager
@@ -88,12 +88,15 @@ class BaseEnemy(Entity):
             step = horiz.length() * dt
             skin = 0.6  # half enemy width approximation
             origin = self.position + Vec3(0, 0.6, 0)
-            hit = raycast(origin, horiz_dir, distance=step + skin, ignore=[self])
+            hit = raycast(
+                origin, horiz_dir,
+                distance=step + skin, ignore=[self])
             if hit.hit and hit.distance <= step + skin:
                 wall_normal = Vec3(hit.world_normal.x, 0, hit.world_normal.z)
                 if wall_normal.length() > 0.01:
                     wall_normal = wall_normal.normalized()
-                    dot = self.velocity.x * wall_normal.x + self.velocity.z * wall_normal.z
+                    dot = (self.velocity.x * wall_normal.x
+                           + self.velocity.z * wall_normal.z)
                     if dot < 0:
                         self.velocity.x -= dot * wall_normal.x
                         self.velocity.z -= dot * wall_normal.z
@@ -113,12 +116,12 @@ class BaseEnemy(Entity):
         return float('inf')
 
     def can_see_target(self) -> bool:
-        """Returns True if target is within detection range with unobstructed line of sight."""
+        """Check if target is within detection range with clear LOS."""
         if not self.target:
             return False
         if self.get_distance_to_target() > self.detection_range:
             return False
-        # Raycast from eye height toward target eye height; ignore self and target
+        # Raycast from eye height toward target; ignore self and target
         eye_offset = Vec3(0, 0.8, 0)
         origin = self.position + eye_offset
         target_pos = self.target.position + eye_offset
@@ -182,7 +185,8 @@ class BaseEnemy(Entity):
         self.color = color.white
         self._flash_timer = self._flash_duration
         if not self.health.is_dead:
-            self.state_machine.transition_to("Hurt", {"damage_info": damage_info})
+            self.state_machine.transition_to(
+                "Hurt", {"damage_info": damage_info})
 
     def get_save_data(self) -> dict:
         return {

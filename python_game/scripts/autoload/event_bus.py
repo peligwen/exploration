@@ -27,19 +27,19 @@ class _EventBus:
 
 
 # Signal name constants
-DAMAGE_DEALT        = "damage_dealt"
-ENTITY_DIED         = "entity_died"
-ITEM_PICKED_UP      = "item_picked_up"
-WEAPON_SWITCHED     = "weapon_switched"
-QUEST_UPDATED       = "quest_updated"
-PLAYER_LEVELED_UP   = "player_leveled_up"
-XP_GAINED           = "xp_gained"
-ZONE_ENTERED        = "zone_entered"
+DAMAGE_DEALT = "damage_dealt"
+ENTITY_DIED = "entity_died"
+ITEM_PICKED_UP = "item_picked_up"
+WEAPON_SWITCHED = "weapon_switched"
+QUEST_UPDATED = "quest_updated"
+PLAYER_LEVELED_UP = "player_leveled_up"
+XP_GAINED = "xp_gained"
+ZONE_ENTERED = "zone_entered"
 DESTRUCTIBLE_BROKEN = "destructible_broken"
 PLAYER_HEALTH_CHANGED = "player_health_changed"
-PLAYER_AMMO_CHANGED   = "player_ammo_changed"
-PLAYER_DIED           = "player_died"
-PLAYER_RESPAWNED      = "player_respawned"
+PLAYER_AMMO_CHANGED = "player_ammo_changed"
+PLAYER_DIED = "player_died"
+PLAYER_RESPAWNED = "player_respawned"
 
 # Expected argument signatures for each signal.
 # Mirrors GDScript typed signal declarations; no runtime enforcement, but

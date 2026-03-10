@@ -1,5 +1,4 @@
 """Enemy Idle state — wait, check for player."""
-from ursina import Vec3
 import random
 from scripts.components.state import State
 

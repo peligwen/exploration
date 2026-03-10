@@ -86,7 +86,7 @@ def test_idle_handle_input_ctrl_transitions_to_dodge():
 def test_idle_handle_input_right_mouse_transitions_to_aim():
     aim = State("Aim")
     sm = _build_sm(PlayerIdle(), aim, start="Idle")
-    sm.handle_input("right mouse down", True)
+    sm.handle_input("right mouse", True)
     assert sm.get_current_state_name() == "Aim"
 
 

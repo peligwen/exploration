@@ -22,8 +22,10 @@ class DamageInfo:
         self.source = None  # The entity that dealt damage
 
     @staticmethod
-    def create(amount: float, source=None, damage_type=DamageType.PHYSICAL,
-               hit_pos=None, knockback=None, crit: bool = False) -> 'DamageInfo':
+    def create(amount: float, source=None,
+               damage_type=DamageType.PHYSICAL,
+               hit_pos=None, knockback=None,
+               crit: bool = False) -> 'DamageInfo':
         info = DamageInfo()
         info.amount = amount
         info.source = source

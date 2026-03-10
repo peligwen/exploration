@@ -1,7 +1,7 @@
 """Independent camera system. Follows a target entity.
 Modes: Follow, Aim, Shake, Death.
 """
-from ursina import Entity, camera, Vec3, lerp, mouse, time, raycast
+from ursina import Entity, camera, Vec3, lerp, raycast
 from enum import Enum
 import math
 import random
@@ -107,7 +107,9 @@ class CameraController:
         ignore = [self.target]
         if hasattr(self.target, 'model_pivot'):
             ignore.append(self.target.model_pivot)
-        hit = raycast(eye, direction.normalized(), distance=distance, ignore=ignore)
+        hit = raycast(
+            eye, direction.normalized(),
+            distance=distance, ignore=ignore)
         if hit.hit:
             # Pull slightly away from the surface so the camera doesn't clip
             return hit.world_point - direction.normalized() * 0.15
@@ -118,19 +120,24 @@ class CameraController:
         pitch_rad = math.radians(self.pitch)
 
         # Calculate camera position behind and above player
-        offset_x = math.sin(yaw_rad) * math.cos(pitch_rad) * self.follow_distance
-        offset_y = math.sin(pitch_rad) * self.follow_distance + self.follow_height
-        offset_z = math.cos(yaw_rad) * math.cos(pitch_rad) * self.follow_distance
+        cos_p = math.cos(pitch_rad)
+        dist = self.follow_distance
+        offset_x = math.sin(yaw_rad) * cos_p * dist
+        offset_y = math.sin(pitch_rad) * dist + self.follow_height
+        offset_z = math.cos(yaw_rad) * cos_p * dist
 
         eye = target_pos + Vec3(0, 1.0, 0)
-        camera_pos = self._spring_arm(eye, target_pos + Vec3(offset_x, offset_y, offset_z))
-        camera.position = lerp(camera.position, camera_pos, delta * self.lerp_speed)
+        offset = Vec3(offset_x, offset_y, offset_z)
+        camera_pos = self._spring_arm(eye, target_pos + offset)
+        t = delta * self.lerp_speed
+        camera.position = lerp(camera.position, camera_pos, t)
 
         # Look at target with slight height offset
         look_target = target_pos + Vec3(0, 1.0, 0)
         camera.look_at(look_target)
 
-        camera.fov = lerp(camera.fov, self.default_fov, delta * self.lerp_speed)
+        t = delta * self.lerp_speed
+        camera.fov = lerp(camera.fov, self.default_fov, t)
 
     def _process_aim(self, target_pos: Vec3, delta: float):
         yaw_rad = math.radians(self.yaw)
@@ -149,12 +156,13 @@ class CameraController:
 
         eye = target_pos + Vec3(0, self.aim_offset.y, 0)
         camera_pos = self._spring_arm(eye, target_pos + offset)
-        camera.position = lerp(camera.position, camera_pos, delta * self.lerp_speed)
+        t = delta * self.lerp_speed
+        camera.position = lerp(camera.position, camera_pos, t)
 
         look_target = target_pos + Vec3(0, 1.2, 0)
         camera.look_at(look_target)
 
-        camera.fov = lerp(camera.fov, self.aim_fov, delta * self.lerp_speed)
+        camera.fov = lerp(camera.fov, self.aim_fov, t)
 
     def _process_death(self, target_pos: Vec3, delta: float):
         self.yaw += self._death_orbit_speed * delta
@@ -178,7 +186,9 @@ class CameraController:
             0
         ) * 0.1
         camera.position += shake_offset
-        self._shake_amount = lerp(self._shake_amount, 0.0, delta * self._shake_decay)
+        decay = delta * self._shake_decay
+        self._shake_amount = lerp(
+            self._shake_amount, 0.0, decay)
         if self._shake_amount < 0.01:
             self._shake_amount = 0.0
             camera.position = Vec3(0, 0, 0)

@@ -11,7 +11,9 @@ class PlayerJump(State):
     def enter(self, previous_state: str, msg: dict = None):
         player = self.owner
         now = time.time()
-        can_jump = player.grounded or (now - player.last_grounded_time) < player.coyote_time
+        elapsed = now - player.last_grounded_time
+        can_jump = (player.grounded
+                    or elapsed < player.coyote_time)
 
         if can_jump:
             player.velocity.y = player.jump_force
