@@ -135,6 +135,7 @@ class CameraController:
         # Look at target with slight height offset
         look_target = target_pos + Vec3(0, 1.0, 0)
         camera.look_at(look_target)
+        camera.rotation_z = 0
 
         t = delta * self.lerp_speed
         camera.fov = lerp(camera.fov, self.default_fov, t)
@@ -161,6 +162,7 @@ class CameraController:
 
         look_target = target_pos + Vec3(0, 1.2, 0)
         camera.look_at(look_target)
+        camera.rotation_z = 0
 
         camera.fov = lerp(camera.fov, self.aim_fov, t)
 
@@ -178,6 +180,7 @@ class CameraController:
         )
         camera.position = lerp(camera.position, camera_pos, delta * 2.0)
         camera.look_at(target_pos + Vec3(0, 0.5, 0))
+        camera.rotation_z = 0
 
     def _apply_shake(self, delta: float):
         shake_offset = Vec3(
@@ -191,4 +194,3 @@ class CameraController:
             self._shake_amount, 0.0, decay)
         if self._shake_amount < 0.01:
             self._shake_amount = 0.0
-            camera.position = Vec3(0, 0, 0)

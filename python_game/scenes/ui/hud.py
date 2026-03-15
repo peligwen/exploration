@@ -1,5 +1,6 @@
 """In-game HUD — health bar, ammo, crosshair, kills, damage numbers."""
-from ursina import Text, Entity, camera, color, destroy
+from ursina import Text, Entity, camera, color, destroy, Vec3, scene
+from panda3d.core import Point3, Point2
 import math
 
 from scripts.autoload.event_bus import (
@@ -143,13 +144,16 @@ class HUD:
         hit_pos = damage_info.hit_position
         if hit_pos is None or hit_pos.length() < 0.01:
             return
-        screen_pos = camera.main.world_to_screen_point(hit_pos)
-        if screen_pos.z < 0:
+        # Project world position to screen via Panda3D lens.
+        # lens.project() returns True on success; point2d is in [-1,1] range.
+        p3 = camera.getRelativePoint(scene, Point3(*hit_pos))
+        point2d = Point2()
+        if not camera.node().get_lens().project(p3, point2d):
             return
-        # Ursina UI coords: x in [-0.5*aspect, 0.5*aspect],
-        # y in [-0.5, 0.5]
-        ui_x = (screen_pos.x - 0.5) * camera.ui.aspect_ratio
-        ui_y = screen_pos.y - 0.5
+        # Convert [-1,1] normalised coords to Ursina UI coords:
+        # x in [-0.5*aspect, 0.5*aspect], y in [-0.5, 0.5]
+        ui_x = point2d.x * 0.5 * camera.ui.aspect_ratio
+        ui_y = point2d.y * 0.5
         dmg_color = color.red if damage_info.is_critical else color.yellow
         dmg_text = Text(
             text=f"{damage_info.amount:.0f}",
